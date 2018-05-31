@@ -11,6 +11,8 @@ Therefor there are no limitations regarding message lengths or format. Additiona
 secured by using the AE-scheme, meaning changes to some parts of the ciphertext, to partial decryptions or even
 dishonest share owners can be detected.
 
+**Warning**: This library has not been (independently) audited and should not be used for productive applications
+
 Usage
 -----
 
