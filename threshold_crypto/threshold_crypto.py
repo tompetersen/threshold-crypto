@@ -11,7 +11,7 @@ dishonest share owners can be detected.
 
 Usage:
     # Generate parameters, public key and shares
-    key_params = ThresholdCrypto.generate_static_key_parameters()
+    key_params = ThresholdCrypto.static_2048_key_parameters()
     thresh_params = ThresholdParameters(3, 5)
     pub_key, key_shares = ThresholdCrypto.create_public_key_and_shares_centralized(key_params, thresh_params)
 
