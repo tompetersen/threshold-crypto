@@ -6,5 +6,6 @@ from .threshold_crypto import (ThresholdCrypto,
                                ThresholdCryptoError,
                                EncryptedMessage,
                                PartialDecryption,
+                               Participant
                                )
 from .number import PolynomMod
