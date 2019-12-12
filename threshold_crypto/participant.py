@@ -1,4 +1,4 @@
-from threshold_crypto.data import EncryptedMessage, KeyShare, PartialDecryption
+from threshold_crypto.data import EncryptedMessage, KeyShare, PartialDecryption, PartialReEncryptionKey
 
 
 def compute_partial_decryption(encrypted_message: EncryptedMessage, key_share: KeyShare) -> PartialDecryption:
@@ -15,3 +15,9 @@ def compute_partial_decryption(encrypted_message: EncryptedMessage, key_share: K
 
     return PartialDecryption(key_share.x, v_y)
 
+
+def compute_partial_re_encryption_key(old_share: KeyShare, old_lambda: int, new_share: KeyShare, new_lambda: int) -> PartialReEncryptionKey:
+    """
+    TBD
+    """
+    pass

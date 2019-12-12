@@ -394,3 +394,21 @@ class PartialDecryption:
     def __str__(self):
         return 'PartialDecryption:\n\tx = %d\n\tv^y = %d' % (self._x, self._v_y)
 
+
+class PartialReEncryptionKey:
+    """
+    TBD
+    """
+
+    def __init__(self):
+        pass
+
+
+class ReEncryptionKey:
+    """
+    TBD
+    """
+
+    def __init__(self):
+        pass
+

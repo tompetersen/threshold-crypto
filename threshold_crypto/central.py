@@ -4,7 +4,7 @@ import nacl.encoding
 import nacl.exceptions
 import nacl.hash
 from threshold_crypto.data import KeyParameters, ThresholdParameters, PublicKey, KeyShare, PartialDecryption, \
-    EncryptedMessage, ThresholdCryptoError
+    EncryptedMessage, ThresholdCryptoError, PartialReEncryptionKey, ReEncryptionKey
 from threshold_crypto import number
 
 
@@ -201,3 +201,13 @@ def _combine_shares(partial_decryptions: [PartialDecryption],
     restored_m = encrypted_message.c * restored_g_minus_ak % key_params.p
 
     return restored_m
+
+
+# re-encryption
+
+
+def combine_partial_re_encryption_keys(partial_keys: [PartialReEncryptionKey]) -> ReEncryptionKey:
+    """
+    TBD
+    """
+    pass
