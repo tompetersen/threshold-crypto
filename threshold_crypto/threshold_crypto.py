@@ -583,10 +583,8 @@ class ThresholdCrypto:
         :param key_params:
         :return:
         """
-        g_a = 0
-        for i in range(len(participants)):
-            g_a += participants[i].h_i
-        return PublicKey(g_a, key_params)
+        h = prod([p.h_i for p in participants]) % key_params.p
+        return PublicKey(h, key_params)
 
     @staticmethod
     def create_public_key_and_shares_centralized(participants: List[Participant], key_params: KeyParameters, threshold_params: ThresholdParameters) -> (
