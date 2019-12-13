@@ -433,14 +433,10 @@ class Participant:
     def choose_polynom(self, a_i: int, t: int, q: int):
         self.polynom = number.PolynomMod.create_random_polynom(a_i, t, q)
 
-    def compute_F(self, generator: int, node_list):
+    def compute_F(self):
+        for coeff in self._polynom.coefficients:
+            self._local_F_ij.append(pow(self.key_params.g, coeff, self.key_params.p))
 
-        self.local_sij = [0] * len(node_list)
-        self.global_sij = [0] * len(node_list)
-
-        for coeff in self.polynom.coefficients:
-            self.F_in.append(pow(generator, coeff))
-        self.calculate_sii(self.polynom.coefficients)
 
     def exchange_F(self, node_list: list):
         for node in node_list:
