@@ -409,26 +409,26 @@ class Participant:
     Number of participants choosing the necessary parameters (x_i, h_i) individually to eventually create the public key.
     """
 
-    def __init__(self, a_i: int, h_i: int, node_id: int, key_params: KeyParameters):
+    def __init__(self, node_id: int, key_params: KeyParameters, threshold_params: ThresholdParameters):
         """
         Choose individual parameters for public key
         """
+        self.a_i = getRandomRange(0, key_params.q - 1)  # Pedersen91 x_i from Z_q
+        self.h_i = pow(key_params.g, self.a_i, key_params.p)
+        self.node_id = node_id
+        self.key_params = key_params
+        self.threshold_params = threshold_params
 
-        self._a_i = a_i  # x_i in Pedersen91
-        self._h_i = h_i
-        self._node_id = node_id
-        self._key_params = key_params
+        self._polynom = None
+        self._local_F_ij = []
+        self._local_sij = {}
+        self._received_F = {}  # F_ij values from all participants
+        self._received_sij = {}  # s_ij values from all participants
 
-        self.polynom = None
-        self.F_in = []
-        self.all_F = []
-        self.global_sij = []
-        self.local_sij = []
-        self.share = 0
-
+        self.s_i = 0
 
     def __str__(self):
-        return 'Participant:\n\ta_i = %d\n\th_i =%d\n\tnode_id=%d' % (self._a_i, self._h_i, self._node_id)
+        return "Participant[node_id = {}, a_i = {}, h_i = {}, s_i = {}".format(self.node_id, self.a_i, self.h_i, self.s_i)
 
     def choose_polynom(self, a_i: int, t: int, q: int):
         self.polynom = number.PolynomMod.create_random_polynom(a_i, t, q)
