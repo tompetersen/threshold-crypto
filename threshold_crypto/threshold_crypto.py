@@ -437,10 +437,11 @@ class Participant:
         for coeff in self._polynom.coefficients:
             self._local_F_ij.append(pow(self.key_params.g, coeff, self.key_params.p))
 
+    def receive_F(self, node: 'Participant'):
+        assert len(node._local_F_ij) == self.threshold_params.t, "F_ij for node {} has length {} != {} = t".format(node.node_id, len(node._local_F_ij), self.threshold_params.t)
+        self._received_F[node.node_id] = node._local_F_ij
 
-    def exchange_F(self, node_list: list):
         for node in node_list:
-            self.all_F.append(node.F_in)
 
     def calculate_sii(self, factors):
         s_ii = 0
