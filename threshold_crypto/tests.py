@@ -172,7 +172,6 @@ class TCTestCase(unittest.TestCase):
 
         self.assertNotEqual(testkey_element, rec_testkey_element)
 
-    """
     def test_complete_process_with_enough_shares(self):
         #key_params = ThresholdCrypto.static_512_key_parameters()
         key_params = ThresholdCrypto.static_manual_key_parameters()
@@ -181,7 +180,7 @@ class TCTestCase(unittest.TestCase):
 
         #pub_key, key_shares = ThresholdCrypto.create_public_key_and_shares_centralized(self.participants, key_params, thresh_params)
         pub_key = ThresholdCrypto.create_public_key(participants, key_params)
-        key_shares = ThresholdCrypto.create_private_share(key_params, thresh_params, participants)
+        key_shares = ThresholdCrypto.create_private_shares(key_params, thresh_params, participants)
 
         message = 'Some secret message to be encrypted!'
         encrypted_message = ThresholdCrypto.encrypt_message(message, pub_key)
@@ -192,7 +191,6 @@ class TCTestCase(unittest.TestCase):
 
         self.assertEqual(message, decrypted_message)
 
-    """
     def test_complete_process_without_enough_shares(self):
         key_params = ThresholdCrypto.static_manual_key_parameters()
         thresh_params = ThresholdParameters(3, 5)
