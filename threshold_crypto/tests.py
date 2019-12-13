@@ -46,7 +46,7 @@ class TCTestCase(unittest.TestCase):
         self.assertEqual(t, t_j)
 
     def test_valid_key_parameters(self):
-        k = KeyParameters(7, 3, 2, [1,2,4]) # 2 generates 3-order subgroup {1,2,4}
+        k = KeyParameters(7, 3, 2)  # 2 generates 3-order subgroup {1,2,4}
 
     #def test_invalid_key_parameters_whole_group(self):
     #    with self.assertRaises(ThresholdCryptoError):
