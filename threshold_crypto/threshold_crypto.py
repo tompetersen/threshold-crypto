@@ -446,22 +446,14 @@ class Participant:
             s_ij = self._polynom.evaluate(node.node_id)
             self._local_sij[node.node_id] = s_ij
 
+    def receive_sij(self, node: 'Participant'):
+        # TODO verification step
+        # g_s = pow(generator, int(p.local_sij[self._node_id-1]))
+        # for l, fac in enumerate(self.received_F[node._node_id - 1]):
+        #    product *= fac ** (self.node_id ** l)
 
+        self._received_sij[node.node_id] = node._local_sij[self.node_id]
 
-    def receive(self, generator, node_list):
-        product = 1
-        for node in node_list:
-            #g_s = pow(generator, int(p.local_sij[self._node_id-1]))
-
-            for l, fac in enumerate(self.all_F[node._node_id - 1]):
-                product *= fac ** (self._node_id ** l)
-
-            if not node._node_id == self._node_id:
-                #if g_s == product:
-                self.global_sij[node._node_id - 1] = node.local_sij[self._node_id-1]
-                #else:
-                    #print("g_s", g_s, "\nproduct", product)
-                #print(self._node_id, "global", self.global_sij)
     def compute_share(self):
         self.s_i = sum(self._received_sij.values()) % self.key_params.q
 
