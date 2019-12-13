@@ -409,15 +409,6 @@ class Participant:
     Number of participants choosing the necessary parameters (x_i, h_i) individually to eventually create the public key.
     """
 
-    @staticmethod
-    def from_json(json_str: str):
-        obj = json.loads(json_str)
-        return Participant.from_dict(obj)
-
-    @staticmethod
-    def from_dict(obj: dict):
-        return Participant(obj['a_i'], obj['h_i'], obj['node_id'], obj['key_params'])
-
     def __init__(self, a_i: int, h_i: int, node_id: int, key_params: KeyParameters):
         """
         Choose individual parameters for public key
@@ -435,37 +426,6 @@ class Participant:
         self.local_sij = []
         self.share = 0
 
-    @property
-    def a_i(self) -> int:
-        return self._a_i
-
-    @property
-    def h_i(self) -> int:
-        return self._h_i
-
-    @property
-    def node_id(self) -> int:
-        return self._node_id
-
-    @property
-    def key_params(self) -> KeyParameters:
-        return self._key_params
-
-    def to_dict(self):
-        return {
-            'a_i': self._a_i,
-            'h_i': self._h_i,
-            'node_id': self._node_id
-        }
-
-    def to_json(self):
-        return json.dumps(self.to_dict())
-
-    def __eq__(self, other):
-        return (isinstance(other, self.__class__) and
-                self.a_i == other.a_i and
-                self.h_i == other.h_i and
-                self.node_id == other.node_id)
 
     def __str__(self):
         return 'Participant:\n\ta_i = %d\n\th_i =%d\n\tnode_id=%d' % (self._a_i, self._h_i, self._node_id)
