@@ -142,15 +142,10 @@ class TCTestCase(unittest.TestCase):
         self.assertTrue(p.evaluate(0) == 17)
 
     def test_public_key(self):
-        h = 1
         restored_priv_key = ThresholdCrypto.restore_priv_key(self.new_kp, self.shares, self.tp)
-
         sk = sum([p.a_i for p in self.participants]) % self.new_kp.q
+        h = ThresholdCrypto.create_public_key(self.participants, self.new_kp)
 
-        for p in self.participants:
-           h = (h * p.h_i) % self.new_kp.p
-
-        #sum_pub_key = sum([p.h_i for p in self.participants])
         self.assertEqual(restored_priv_key, sk, "First test")
         self.assertEqual(pow(self.new_kp.g, sk, self.new_kp.p), h, "Second test")
         self.assertEqual(h, pow(self.new_kp.g, restored_priv_key, self.new_kp.p))
