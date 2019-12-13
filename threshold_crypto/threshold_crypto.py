@@ -441,25 +441,12 @@ class Participant:
         assert len(node._local_F_ij) == self.threshold_params.t, "F_ij for node {} has length {} != {} = t".format(node.node_id, len(node._local_F_ij), self.threshold_params.t)
         self._received_F[node.node_id] = node._local_F_ij
 
+    def calculate_sij(self, node_list: ['Participant']):
         for node in node_list:
+            s_ij = self._polynom.evaluate(node.node_id)
+            self._local_sij[node.node_id] = s_ij
 
-    def calculate_sii(self, factors):
-        s_ii = 0
-        for i, factor in enumerate(factors):
-            s_ii += factor * self._node_id ** i
-        s_ii = s_ii % self.key_params.q
 
-        self.local_sij[self._node_id - 1] = s_ii
-        self.global_sij[self._node_id - 1] = s_ii
-
-    def calculate_sij(self, node_list: list):
-        s_ij = 0
-        for node in node_list:
-            if not self._node_id == node._node_id:
-                for i, coeff in enumerate(self.polynom.coefficients):
-                    s_ij += coeff * node._node_id ** i
-                s_ij = s_ij % self.key_params.q
-                self.local_sij[node._node_id - 1] = s_ij
 
     def receive(self, generator, node_list):
         product = 1
