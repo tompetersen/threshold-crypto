@@ -462,12 +462,8 @@ class Participant:
                 #else:
                     #print("g_s", g_s, "\nproduct", product)
                 #print(self._node_id, "global", self.global_sij)
-
-    def compute_share(self) -> int:
-        for i in self.global_sij:
-            self.share += i
-        self.share = self.share % self.key_params.p
-        return self.share
+    def compute_share(self):
+        self.s_i = sum(self._received_sij.values()) % self.key_params.q
 
 
 class ThresholdCrypto:
