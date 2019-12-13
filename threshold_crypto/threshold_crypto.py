@@ -430,8 +430,8 @@ class Participant:
     def __str__(self):
         return "Participant[node_id = {}, a_i = {}, h_i = {}, s_i = {}".format(self.node_id, self.a_i, self.h_i, self.s_i)
 
-    def choose_polynom(self, a_i: int, t: int, q: int):
-        self.polynom = number.PolynomMod.create_random_polynom(a_i, t, q)
+    def choose_polynom(self):
+        self._polynom = number.PolynomMod.create_random_polynom(self.a_i, self.threshold_params.t - 1, self.key_params.q)
 
     def compute_F(self):
         for coeff in self._polynom.coefficients:
