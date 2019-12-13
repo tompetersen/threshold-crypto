@@ -533,19 +533,7 @@ class ThresholdCrypto:
         :param threshold_params:
         :return:
         """
-        participants = []
-        for p in range(1, threshold_params.n+1):
-
-            """
-            Sets parameters for secret key share, public key share and also 
-            chooses the coefficients for their polynom f_i(z)
-            """
-            a_i = random.choice(key_params.zq)
-            h_i = pow(key_params.g, a_i)
-            id = p
-
-            participants.append(Participant(a_i, h_i, id, key_params))
-        return participants
+        return [Participant(p, key_params, threshold_params) for p in range(1, threshold_params.n + 1)]
 
     @staticmethod
     def create_private_share(key_params: KeyParameters, threshold_params: ThresholdParameters,
