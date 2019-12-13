@@ -718,12 +718,13 @@ class ThresholdCrypto:
 
     @staticmethod
     def restore_priv_key(key_params: KeyParameters, shares: [KeyShare], treshold_params: ThresholdParameters):
-        x_shares = [share.x for share in shares[:treshold_params.t]]
-        y_shares = [share.y for share in shares[:treshold_params.t]]
-        print(x_shares)
+        used_shares = shares[:treshold_params.t]
+        x_shares = [share.x for share in used_shares]
+        y_shares = [share.y for share in used_shares]
+
         lagrange_coefficients = number.build_lagrange_coefficients(x_shares, key_params.q)
-        print(lagrange_coefficients)
-        restored_a = sum([(lagrange_coefficients[i]*y_shares[i]) for i in range(0, len(y_shares))]) % key_params.q
+
+        restored_a = sum([(lagrange_coefficients[i] * y_shares[i]) for i in range(0, len(used_shares))]) % key_params.q
 
         return restored_a
 
