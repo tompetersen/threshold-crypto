@@ -536,8 +536,8 @@ class ThresholdCrypto:
         return [Participant(p, key_params, threshold_params) for p in range(1, threshold_params.n + 1)]
 
     @staticmethod
-    def create_private_share(key_params: KeyParameters, threshold_params: ThresholdParameters,
-                             participants: List[Participant]) -> [KeyShare]:
+    def create_private_shares(key_params: KeyParameters, threshold_params: ThresholdParameters,
+                              participants: List[Participant]) -> [KeyShare]:
         """
         Pedersen91-related
 
@@ -549,26 +549,29 @@ class ThresholdCrypto:
         shares = []
 
         for p in participants:
-            p.choose_polynom(p.a_i, threshold_params.t, key_params.q)
+            p.choose_polynom()
 
         for p in participants:
-            p.compute_F(key_params.g, participants)
+            p.compute_F()
 
-        for p in participants:
-            p.exchange_F(participants)
+        for pi in participants:
+            for pj in participants:
+                pi.receive_F(pj)
 
         for p in participants:
             p.calculate_sij(participants)
 
-        for p in participants:
-            p.receive(key_params.g, participants)
+        for pi in participants:
+            for pj in participants:
+                pi.receive_sij(pj)
 
         for p in participants:
-            y = p.compute_share()
+            p.compute_share()
             x = p.node_id
-            share = KeyShare(x, y, key_params)
+            share = KeyShare(x, p.s_i, key_params)
             shares.append(share)
             print("node", p.node_id, share, "a_i", p.a_i)
+
         return shares
 
     @staticmethod
