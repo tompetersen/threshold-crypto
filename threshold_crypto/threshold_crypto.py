@@ -33,6 +33,8 @@ from threshold_crypto import number
 from typing import List
 from math import floor
 
+from threshold_crypto.number import prod, getRandomRange
+
 
 class ThresholdCryptoError(Exception):
     pass
