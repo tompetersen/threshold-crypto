@@ -222,8 +222,35 @@ def restore_priv_key(key_params: KeyParameters, shares: [KeyShare], treshold_par
 # re-encryption
 
 
-def combine_partial_re_encryption_keys(partial_keys: [PartialReEncryptionKey]) -> ReEncryptionKey:
+def combine_partial_re_encryption_keys(partial_keys: [PartialReEncryptionKey], old_threshold_params: ThresholdParameters, new_threshold_params: ThresholdParameters) -> ReEncryptionKey:
     """
     TBD
     """
-    pass
+    # TODO check threshold parameters
+    if old_threshold_params != new_threshold_params:
+        raise ThresholdCryptoError("Threshold parameters differ! For now this is not allowed...")
+
+    if len(partial_keys) < new_threshold_params.t or len(partial_keys) < 1:
+        raise ThresholdCryptoError("Not enough partial re-encryption keys given")
+
+    key_params = partial_keys[0].key_params
+    for partial_key in partial_keys:
+        if partial_key.key_params != key_params:
+            raise ThresholdCryptoError("Varying key params found in partial re-encryption keys")
+
+    re_key = sum([k.partial_key for k in partial_keys]) % key_params.q
+
+    return ReEncryptionKey(re_key, key_params)
+
+
+def re_encrypt_message(em: EncryptedMessage, re_key: ReEncryptionKey) -> EncryptedMessage:
+    """
+    TBD
+    :param em:
+    :param re_key:
+    :return:
+    """
+    p = re_key.key_params.p
+    re_enc_c = em.c * pow(em.v, re_key.key, p) % p
+
+    return EncryptedMessage(em.v, re_enc_c, em.enc)
