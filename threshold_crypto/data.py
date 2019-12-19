@@ -287,7 +287,7 @@ class EncryptedMessage:
     """
     An encrypted message in the scheme. Because a hybrid approach is used it consists of three parts:
     - v = g^k mod p as in the ElGamal scheme
-    - c = r * g^k mod p as in the ElGamal scheme with r being the value to be encrypted
+    - c = r * g^ak mod p as in the ElGamal scheme with r being the value to be encrypted
     - enc the symmetrically encrypted message.
     The symmetric key is derived from the ElGamal encrypted value r.
     """
