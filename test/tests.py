@@ -19,7 +19,8 @@ class TCTestCase(unittest.TestCase):
         self.tp = ThresholdParameters(3, 5)
         self.kp = central.static_512_key_parameters()
         self.pk, self.shares = central.create_public_key_and_shares_centralized(self.kp, self.tp)
-        self.em = central.encrypt_message('Some secret message', self.pk)
+        self.message = 'Some secret message'
+        self.em = central.encrypt_message(self.message, self.pk)
         self.reconstruct_shares = [self.shares[i] for i in [0, 2, 4]]  # choose 3 of 5 key shares
         self.partial_decryptions = [participant.compute_partial_decryption(self.em, share) for share in self.reconstruct_shares]
 
@@ -94,7 +95,7 @@ class TCTestCase(unittest.TestCase):
         self.assertEqual(share, share_j)
 
     def test_message_encryption(self):
-        em = central.encrypt_message('Some secret message', self.pk)
+        em = central.encrypt_message(self.message, self.pk)
 
         self.assertTrue(em.c >= 0)
         self.assertTrue(em.v >= 0)
@@ -169,3 +170,33 @@ class TCTestCase(unittest.TestCase):
 
         with self.assertRaises(ThresholdCryptoError):
             decrypted_message = central.decrypt_message(partial_decryptions, encrypted_message, thresh_params, key_params)
+
+    def test_re_encryption_process_for_same_access_structures(self):
+        """ """
+        new_pk, new_shares = central.create_public_key_and_shares_centralized(self.kp, self.tp)
+
+        assert new_pk != self.pk, "Public keys for new and old access structure are the same"
+
+        t_old_shares = self.shares[:self.tp.t]
+        t_new_shares = new_shares[:self.tp.t]
+        partial_re_encrypt_keys = []
+
+        for i, (s_old, s_new) in enumerate(zip(t_old_shares, t_new_shares)):
+            old_lambda = participant._compute_lagrange_coefficient_for_key_shares(t_old_shares, i)
+            new_lambda = participant._compute_lagrange_coefficient_for_key_shares(t_new_shares, i)
+            partial_key = participant.compute_partial_re_encryption_key(s_old, old_lambda, s_new, new_lambda)
+            partial_re_encrypt_keys.append(partial_key)
+
+        re_encrypt_key = central.combine_partial_re_encryption_keys(partial_re_encrypt_keys, self.tp, self.tp)
+        re_em = central.re_encrypt_message(self.em, re_encrypt_key)
+
+        self.assertNotEqual(self.em, re_em)
+
+        new_reconstruct_shares = [new_shares[i] for i in [0, 2, 4]]
+        new_partial_decryptions = [participant.compute_partial_decryption(re_em, share) for share in new_reconstruct_shares]
+
+        decrypted_message = central.decrypt_message(new_partial_decryptions, re_em, self.tp, self.kp)
+
+        self.assertEqual(self.message, decrypted_message)
+
+
