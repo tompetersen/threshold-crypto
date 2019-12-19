@@ -400,8 +400,13 @@ class PartialReEncryptionKey:
     TBD
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, partial_key: int, key_params: KeyParameters):
+        """
+        TBD
+        :param partial_key: The difference of (λ2_i * y2_i - λ1_i * y1_i) where *1 are the old and *2 the new components
+        """
+        self.partial_key = partial_key
+        self.key_params = key_params
 
 
 class ReEncryptionKey:
@@ -409,6 +414,10 @@ class ReEncryptionKey:
     TBD
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, key, key_params: KeyParameters):
+        """
 
+        :param key: the reencryption key (y2 - y1) meaning old private key minus new private key
+        """
+        self.key = key
+        self.key_params = key_params
