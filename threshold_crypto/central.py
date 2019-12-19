@@ -203,6 +203,22 @@ def _combine_shares(partial_decryptions: [PartialDecryption],
     return restored_m
 
 
+# private key restoration
+
+def restore_priv_key(key_params: KeyParameters, shares: [KeyShare], treshold_params: ThresholdParameters):
+    used_shares = shares[:treshold_params.t]
+    x_shares = [share.x for share in used_shares]
+    y_shares = [share.y for share in used_shares]
+
+    lagrange_coefficients = number.build_lagrange_coefficients(x_shares, key_params.q)
+    #tmp
+    print(lagrange_coefficients)
+
+    restored_a = sum([(lagrange_coefficients[i] * y_shares[i]) for i in range(0, len(used_shares))]) % key_params.q
+
+    return restored_a
+
+
 # re-encryption
 
 
