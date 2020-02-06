@@ -440,21 +440,20 @@ class Participant:
             s_ij = self._polynom.evaluate(node.node_id)
             self._local_sij[node.node_id] = s_ij
 
-    def receive_sij(self, node: 'Participant', generator):
-        # TODO verification step
-        product = 1
-        g_s = pow(generator, int(node._local_sij.get(self.node_id)))
-        for l, fac in enumerate(self._received_F.get(node.node_id)):
-            product *= (fac ** (self.node_id ** l))
+    def receive_sij(self, node: 'Participant'):
+        received_sij = node._local_sij[self.node_id]
 
-        g_s = g_s % self.key_params.p
-        product = product % self.key_params.p
-
-        if g_s == product:
-            self._received_sij[node.node_id] = node._local_sij[self.node_id]
+        if node.node_id not in self._received_sij:
+            self._received_sij[node.node_id] = received_sij
         else:
-            print("g_s", g_s % self.key_params.p)
-            print("product", product % self.key_params.p)
+            raise ThresholdCryptoError("s_ij value for node {} already received".format(node.node_id))
+
+        g_s_ij = pow(self.key_params.g, received_sij, self.key_params.p)
+        F_list = [(F_jl ** (self.node_id ** l)) for l, F_jl in enumerate(self._received_F[node.node_id])]
+        F_product = number.prod(F_list) % self.key_params.p
+
+        if g_s_ij != F_product:
+            raise ThresholdCryptoError("F verification failed for node {}".format(node.node_id))
 
     def compute_share(self):
         self.s_i = sum(self._received_sij.values()) % self.key_params.q
@@ -561,7 +560,7 @@ class ThresholdCrypto:
 
         for pi in participants:
             for pj in participants:
-                pi.receive_sij(pj, key_params.g)
+                pi.receive_sij(pj)
 
         for p in participants:
             p.compute_share()
