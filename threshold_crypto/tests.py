@@ -191,9 +191,10 @@ class TCTestCase(unittest.TestCase):
     def test_complete_process_without_enough_shares(self):
         key_params = ThresholdCrypto.static_512_key_parameters()
         thresh_params = ThresholdParameters(3, 5)
+        participants = ThresholdCrypto.initialize_participants(key_params, thresh_params)
 
-        pub_key = ThresholdCrypto.create_public_key(self.participants, key_params)
-        key_shares = ThresholdCrypto.create_private_shares(key_params, thresh_params, self.participants)
+        pub_key = ThresholdCrypto.create_public_key(participants, key_params)
+        key_shares = ThresholdCrypto.create_private_shares(key_params, thresh_params, participants)
 
         message = 'Some secret message to be encrypted!'
         encrypted_message = ThresholdCrypto.encrypt_message(message, pub_key)
