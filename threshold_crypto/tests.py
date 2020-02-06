@@ -204,3 +204,28 @@ class TCTestCase(unittest.TestCase):
 
         with self.assertRaises(ThresholdCryptoError):
             decrypted_message = ThresholdCrypto.decrypt_message(partial_decryptions, encrypted_message, thresh_params, key_params)
+
+    def test_failing_F_verification(self):
+        key_params = ThresholdCrypto.static_512_key_parameters()
+        thresh_params = ThresholdParameters(3, 5)
+        participants = ThresholdCrypto.initialize_participants(key_params, thresh_params)
+
+        for p in participants:
+            p.choose_polynom()
+
+        for p in participants:
+            p.compute_F()
+
+        participants[0]._local_F_ij[0] = pow(key_params.g, participants[0]._polynom.coefficients[0] + 1, key_params.p)
+
+        for pi in participants:
+            for pj in participants:
+                pi.receive_F(pj)
+
+        for p in participants:
+            p.calculate_sij(participants)
+
+        with self.assertRaises(ThresholdCryptoError):
+            for pi in participants:
+                for pj in participants:
+                    pi.receive_sij(pj)
