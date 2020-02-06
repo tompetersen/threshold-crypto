@@ -435,13 +435,21 @@ class Participant:
             s_ij = self._polynom.evaluate(node.node_id)
             self._local_sij[node.node_id] = s_ij
 
-    def receive_sij(self, node: 'Participant'):
+    def receive_sij(self, node: 'Participant', generator):
         # TODO verification step
-        # g_s = pow(generator, int(p.local_sij[self._node_id-1]))
-        # for l, fac in enumerate(self.received_F[node._node_id - 1]):
-        #    product *= fac ** (self.node_id ** l)
+        product = 1
+        g_s = pow(generator, int(node._local_sij.get(self.node_id)))
+        for l, fac in enumerate(self._received_F.get(node.node_id)):
+            product *= (fac ** (self.node_id ** l))
 
-        self._received_sij[node.node_id] = node._local_sij[self.node_id]
+        g_s = g_s % self.key_params.p
+        product = product % self.key_params.p
+
+        if g_s == product:
+            self._received_sij[node.node_id] = node._local_sij[self.node_id]
+        else:
+            print("g_s", g_s % self.key_params.p)
+            print("product", product % self.key_params.p)
 
     def compute_share(self):
         self.s_i = sum(self._received_sij.values()) % self.key_params.q
@@ -548,7 +556,7 @@ class ThresholdCrypto:
 
         for pi in participants:
             for pj in participants:
-                pi.receive_sij(pj)
+                pi.receive_sij(pj, key_params.g)
 
         for p in participants:
             p.compute_share()
