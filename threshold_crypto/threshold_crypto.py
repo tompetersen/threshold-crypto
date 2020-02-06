@@ -27,7 +27,6 @@ import nacl.secret
 import nacl.encoding
 import nacl.exceptions
 import nacl.hash
-import random
 
 from threshold_crypto import number
 from typing import List

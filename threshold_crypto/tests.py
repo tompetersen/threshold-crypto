@@ -8,7 +8,6 @@ from threshold_crypto import (ThresholdCrypto,
                               KeyShare,
                               EncryptedMessage,
                               PartialDecryption,
-                              Participant,
                               number)
 
 
