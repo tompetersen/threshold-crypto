@@ -182,7 +182,7 @@ class TCTestCase(unittest.TestCase):
         message = 'Some secret message to be encrypted!'
         encrypted_message = ThresholdCrypto.encrypt_message(message, pub_key)
 
-        reconstruct_shares = [key_shares[i] for i in [0, 2, 4]] # choose 3 of 5 key shares
+        reconstruct_shares = [key_shares[i] for i in [0, 2, 4]]  # choose 3 of 5 key shares
         partial_decryptions = [ThresholdCrypto.compute_partial_decryption(encrypted_message, share) for share in reconstruct_shares]
         decrypted_message = ThresholdCrypto.decrypt_message(partial_decryptions, encrypted_message, thresh_params, key_params)
 
@@ -199,7 +199,7 @@ class TCTestCase(unittest.TestCase):
         message = 'Some secret message to be encrypted!'
         encrypted_message = ThresholdCrypto.encrypt_message(message, pub_key)
 
-        reconstruct_shares = [key_shares[i] for i in [3, 4]] # choose 2 of 5 key shares
+        reconstruct_shares = [key_shares[i] for i in [3, 4]]  # choose 2 of 5 key shares
         partial_decryptions = [ThresholdCrypto.compute_partial_decryption(encrypted_message, share) for share in reconstruct_shares]
 
         with self.assertRaises(ThresholdCryptoError):

@@ -567,7 +567,6 @@ class ThresholdCrypto:
             x = p.node_id
             share = KeyShare(x, p.s_i, key_params)
             shares.append(share)
-            print("node", p.node_id, share, "a_i", p.a_i)
 
         return shares
 
@@ -610,6 +609,7 @@ class ThresholdCrypto:
         polynom = number.PolynomMod.create_random_polynom(a, threshold_params.t - 1, key_params.q)
         supporting_points = range(1, threshold_params.n + 1)
         shares = [KeyShare(x, polynom.evaluate(x), key_params) for x in supporting_points]
+
         return public_key, shares
 
     @staticmethod
@@ -739,8 +739,6 @@ class ThresholdCrypto:
         # compute lagrange coefficients
         partial_indices = [dec.x for dec in partial_decryptions]
         lagrange_coefficients = number.build_lagrange_coefficients(partial_indices, key_params.q)
-        print(partial_indices)
-        print(lagrange_coefficients)
         factors = [
             pow(partial_decryptions[i].v_y, lagrange_coefficients[i], key_params.p)
             for i in range(0, len(partial_decryptions))
