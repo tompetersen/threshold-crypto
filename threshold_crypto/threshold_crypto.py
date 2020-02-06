@@ -427,8 +427,13 @@ class Participant:
             self._local_F_ij.append(pow(self.key_params.g, coeff, self.key_params.p))
 
     def receive_F(self, node: 'Participant'):
-        assert len(node._local_F_ij) == self.threshold_params.t, "F_ij for node {} has length {} != {} = t".format(node.node_id, len(node._local_F_ij), self.threshold_params.t)
-        self._received_F[node.node_id] = node._local_F_ij
+        if len(node._local_F_ij) != self.threshold_params.t:
+            raise ThresholdCryptoError("list of F_ij for node {} has length {} != {} = t".format(node.node_id, len(node._local_F_ij), self.threshold_params.t))
+
+        if node.node_id not in self._received_F:
+            self._received_F[node.node_id] = node._local_F_ij
+        else:
+            raise ThresholdCryptoError("F value for node {} already received".format(node.node_id))
 
     def calculate_sij(self, node_list: ['Participant']):
         for node in node_list:
