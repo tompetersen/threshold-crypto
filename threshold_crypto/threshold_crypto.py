@@ -33,8 +33,6 @@ from threshold_crypto import number
 from typing import List
 from math import floor
 
-from threshold_crypto.number import prod, getRandomRange
-
 
 class ThresholdCryptoError(Exception):
     pass
@@ -405,7 +403,7 @@ class Participant:
         """
         Choose individual parameters for public key
         """
-        self.a_i = getRandomRange(0, key_params.q - 1)  # Pedersen91 x_i from Z_q
+        self.a_i = number.getRandomRange(0, key_params.q - 1)  # Pedersen91 x_i from Z_q
         self.h_i = pow(key_params.g, self.a_i, key_params.p)
         self.node_id = node_id
         self.key_params = key_params
@@ -571,7 +569,7 @@ class ThresholdCrypto:
         :param key_params:
         :return:
         """
-        h = prod([p.h_i for p in participants]) % key_params.p
+        h = number.prod([p.h_i for p in participants]) % key_params.p
         return PublicKey(h, key_params)
 
     @staticmethod
