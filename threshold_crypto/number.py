@@ -64,6 +64,10 @@ class PolynomMod:
     def degree(self):
         return len(self._coefficients) - 1
 
+    @property
+    def coefficients(self) -> list:
+        return self._coefficients
+
     def evaluate(self, x: int) -> int:
         evaluated = ((self._coefficients[j] * pow(x, j)) for j in range(0, self.degree + 1))
         return sum(evaluated) % self.q
@@ -75,7 +79,6 @@ class PolynomMod:
 
 def build_lagrange_coefficients(partial_ind: [int], p: int) -> [int]:
     k_tmp = len(partial_ind)
-
     def x(idx):
         return partial_ind[idx]
 

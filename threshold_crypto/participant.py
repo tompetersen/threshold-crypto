@@ -1,6 +1,6 @@
 from threshold_crypto.data import EncryptedMessage, KeyShare, PartialDecryption, PartialReEncryptionKey, \
-    ThresholdCryptoError
-from threshold_crypto.number import prime_mod_inv, prod
+    ThresholdCryptoError, KeyParameters, ThresholdParameters
+from threshold_crypto import number
 
 
 def compute_partial_decryption(encrypted_message: EncryptedMessage, key_share: KeyShare) -> PartialDecryption:
@@ -55,5 +55,76 @@ def _compute_lagrange_coefficient_for_key_shares(key_shares: [KeyShare], i: int)
     def x(idx):
         return x_values[idx]
 
-    tmp = [(- x(j) * prime_mod_inv(x(i) - x(j), key_params.q)) for j in range(0, k_tmp) if not j == i]
-    return prod(tmp) % key_params.q  # lambda_i
+    tmp = [(- x(j) * number.prime_mod_inv(x(i) - x(j), key_params.q)) for j in range(0, k_tmp) if not j == i]
+    return number.prod(tmp) % key_params.q  # lambda_i
+
+
+class Participant:
+    """
+
+    """
+
+    def __init__(self, node_id: int, key_params: KeyParameters, threshold_params: ThresholdParameters):
+        """
+
+
+        :param node_id:
+        :param key_params:
+        :param threshold_params:
+        """
+        self.a_i = number.getRandomRange(0, key_params.q - 1)  # Pedersen91 x_i from Z_q
+        self.h_i = pow(key_params.g, self.a_i, key_params.p)
+        self.node_id = node_id
+        self.key_params = key_params
+        self.threshold_params = threshold_params
+
+        self._polynom = None
+        self._local_F_ij = []
+        self._local_sij = {}
+        self._received_F = {}  # F_ij values from all participants
+        self._received_sij = {}  # s_ij values from all participants
+
+        self.s_i = 0
+
+    def __str__(self):
+        return "Participant[node_id = {}, a_i = {}, h_i = {}, s_i = {}".format(self.node_id, self.a_i, self.h_i, self.s_i)
+
+    def choose_polynom(self):
+        self._polynom = number.PolynomMod.create_random_polynom(self.a_i, self.threshold_params.t - 1, self.key_params.q)
+
+    def compute_F(self):
+        for coeff in self._polynom.coefficients:
+            self._local_F_ij.append(pow(self.key_params.g, coeff, self.key_params.p))
+
+    def receive_F(self, node: 'Participant'):
+        if len(node._local_F_ij) != self.threshold_params.t:
+            raise ThresholdCryptoError("list of F_ij for node {} has length {} != {} = t".format(node.node_id, len(node._local_F_ij), self.threshold_params.t))
+
+        if node.node_id not in self._received_F:
+            self._received_F[node.node_id] = node._local_F_ij
+        else:
+            raise ThresholdCryptoError("F value for node {} already received".format(node.node_id))
+
+    def calculate_sij(self, node_list: ['Participant']):
+        for node in node_list:
+            s_ij = self._polynom.evaluate(node.node_id)
+            self._local_sij[node.node_id] = s_ij
+
+    def receive_sij(self, node: 'Participant'):
+        received_sij = node._local_sij[self.node_id]
+
+        if node.node_id not in self._received_sij:
+            self._received_sij[node.node_id] = received_sij
+        else:
+            raise ThresholdCryptoError("s_ij value for node {} already received".format(node.node_id))
+
+        g_s_ij = pow(self.key_params.g, received_sij, self.key_params.p)
+        F_list = [(F_jl ** (self.node_id ** l)) for l, F_jl in enumerate(self._received_F[node.node_id])]
+        F_product = number.prod(F_list) % self.key_params.p
+
+        if g_s_ij != F_product:
+            raise ThresholdCryptoError("F verification failed for node {}".format(node.node_id))
+
+    def compute_share(self):
+        self.s_i = sum(self._received_sij.values()) % self.key_params.q
+
