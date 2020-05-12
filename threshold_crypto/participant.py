@@ -5,7 +5,7 @@ from threshold_crypto.number import prime_mod_inv, prod
 
 def compute_partial_decryption(encrypted_message: EncryptedMessage, key_share: KeyShare) -> PartialDecryption:
     """
-    Compute a partial decryption of an encrypted message using a key share.
+    Compute the partial decryption of an encrypted message using a key share.
 
     :param encrypted_message: the encrypted message
     :param key_share: the key share
@@ -20,7 +20,13 @@ def compute_partial_decryption(encrypted_message: EncryptedMessage, key_share: K
 
 def compute_partial_re_encryption_key(old_share: KeyShare, old_lambda: int, new_share: KeyShare, new_lambda: int) -> PartialReEncryptionKey:
     """
-    TBD
+    Compute a partial re-encryption key from a participants old and new share.
+
+    :param old_share:
+    :param old_lambda:
+    :param new_share:
+    :param new_lambda:
+    :return:
     """
     if old_share.key_parameters != new_share.key_parameters:
         raise ThresholdCryptoError("Key parameters in old and new share differ")
@@ -32,6 +38,16 @@ def compute_partial_re_encryption_key(old_share: KeyShare, old_lambda: int, new_
 
 
 def _compute_lagrange_coefficient_for_key_shares(key_shares: [KeyShare], i: int) -> int:
+    """
+    Create the ith Lagrange coefficient for a list of key shares.
+
+    Just temporary! This will live in a centralized spot later so that participants just receive the coefficient later.
+    It will obviously just take the x-values into account.
+
+    :param key_shares:
+    :param i:
+    :return:
+    """
     x_values = [share.x for share in key_shares]
     key_params = key_shares[0].key_parameters
     k_tmp = len(x_values)
