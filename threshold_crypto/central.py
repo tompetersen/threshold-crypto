@@ -85,7 +85,7 @@ def create_public_key_and_shares_centralized(key_params: KeyParameters, threshol
     return public_key, shares
 
 
-def create_public_key(participants: [Participant], key_params: KeyParameters) -> PublicKey:
+def create_public_key(participants_h_i: [int], key_params: KeyParameters, threshold_params: ThresholdParameters) -> PublicKey:
     """
     Pedersen91-related
 
@@ -93,7 +93,10 @@ def create_public_key(participants: [Participant], key_params: KeyParameters) ->
     :param key_params:
     :return:
     """
-    h = number.prod([p.h_i for p in participants]) % key_params.p
+    if len(participants_h_i) != threshold_params.n:
+        raise ThresholdCryptoError('number of participants h_i values {} != {} = n'.format(len(participants_h_i), threshold_params.n))
+
+    h = number.prod(participants_h_i) % key_params.p
     return PublicKey(h, key_params)
 
 
