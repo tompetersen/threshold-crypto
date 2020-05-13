@@ -9,7 +9,7 @@ from threshold_crypto.data import (ThresholdParameters,
                                    PartialDecryption,
                                    )
 from threshold_crypto import number
-from threshold_crypto import central
+from threshold_crypto import central, Participant
 from threshold_crypto import participant
 
 
@@ -169,7 +169,26 @@ class TCTestCase(unittest.TestCase):
         partial_decryptions = [participant.compute_partial_decryption(encrypted_message, share) for share in reconstruct_shares]
 
         with self.assertRaises(ThresholdCryptoError):
-            decrypted_message = central.decrypt_message(partial_decryptions, encrypted_message, thresh_params, key_params)
+            central.decrypt_message(partial_decryptions, encrypted_message, thresh_params, key_params)
+
+
+class PreTestCase(unittest.TestCase):
+    """
+    Test cases for the proxy reencryption scheme.
+    """
+
+    def setUp(self):
+        self.tp = ThresholdParameters(3, 5)
+        self.kp = central.static_512_key_parameters()
+        self.pk, self.shares = central.create_public_key_and_shares_centralized(self.kp, self.tp)
+        self.message = 'Some secret message'
+        self.em = central.encrypt_message(self.message, self.pk)
+        self.reconstruct_shares = [self.shares[i] for i in [0, 2, 4]]  # choose 3 of 5 key shares
+        self.partial_decryptions = [participant.compute_partial_decryption(self.em, share) for share in
+                                    self.reconstruct_shares]
+
+    def tearDown(self):
+        pass
 
     def test_re_encryption_process_for_same_access_structures(self):
         """ """
@@ -200,3 +219,47 @@ class TCTestCase(unittest.TestCase):
         self.assertEqual(self.message, decrypted_message)
 
 
+class DkgTestCase(unittest.TestCase):
+    """
+    Test cases for the distributed key generation.
+    """
+
+    def setUp(self):
+        self.tp = ThresholdParameters(3, 5)
+        self.kp = central.static_512_key_parameters()
+        self.message = 'Some secret message'
+
+    def tearDown(self):
+        pass
+
+    def test_distributed_key_generation(self):
+        participants = [Participant(id, self.kp, self.tp) for id in range(1, self.tp.n + 1)]
+
+        # steps for Pedersen DKG protocol
+        for pi in participants:
+            for pj in participants:
+                pi.receive_F(pj.node_id, pj._local_F_ij)
+
+        node_ids = [p.node_id for p in participants]
+        for p in participants:
+            p.calculate_sij(node_ids)
+
+        for pi in participants:
+            for pj in participants:
+                pi.receive_sij(pj.node_id, pj._local_sij[pi.node_id])
+
+        for p in participants:
+            p.compute_share()
+
+        p_his = [p.h_i for p in participants]
+        public_key = central.create_public_key(p_his, self.kp, self.tp)
+
+        # test encryption/decryption
+
+        em = central.encrypt_message(self.message, public_key)
+
+        shares = [p.key_share for p in participants]
+        pdms = [participant.compute_partial_decryption(em, ks) for ks in shares[:self.tp.t]]
+        dm = central.decrypt_message(pdms, em, self.tp, self.kp)
+
+        self.assertEqual(dm, self.message)
