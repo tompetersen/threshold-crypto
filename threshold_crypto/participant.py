@@ -104,6 +104,9 @@ class Participant:
             raise ThresholdCryptoError("F value for node {} already received".format(node_id))
 
     def calculate_sij(self, node_id_list: [int]):
+        if len(node_id_list) != self.threshold_params.n:
+            raise ThresholdCryptoError("list of node ids has length {} != {} = n".format(len(node_id_list), self.threshold_params.n))
+
         for node_id in node_id_list:
             s_ij = self._polynom.evaluate(node_id)
             self._local_sij[node_id] = s_ij
