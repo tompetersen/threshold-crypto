@@ -82,48 +82,48 @@ def encrypt_message(message: str, public_key: PublicKey) -> EncryptedMessage:
 
     :param message: the message to be encrypted
     :param public_key: the public key
-    :return: an encrypted message
+    :return: the encrypted message
     """
+    curve_params = public_key.curve_params
     encoded_message = bytes(message, 'utf-8')
-    key_params = public_key.key_parameters
 
     # Create random subgroup element and use its hash as symmetric key to prevent
     # attacks described in "Why Textbook ElGamal and RSA Encryption Are Insecure"
     # by Boneh et. al.
-    r = number.getRandomRange(2, public_key.key_parameters.q)
-    key_subgroup_element = pow(key_params.g, r, key_params.p)
-    key_subgroup_element_byte_length = (key_subgroup_element.bit_length() + 7) // 8
-    element_bytes = key_subgroup_element.to_bytes(key_subgroup_element_byte_length, byteorder='big')
+    r = number.getRandomRange(1, curve_params.order)
+    key_point = r * curve_params.P
+    point_bytes = _key_bytes_from_point(key_point)
 
     try:
-        symmetric_key = nacl.hash.blake2b(element_bytes,
+        symmetric_key = nacl.hash.blake2b(point_bytes,
                                           digest_size=nacl.secret.SecretBox.KEY_SIZE,
                                           encoder=nacl.encoding.RawEncoder)
         # Use derived symmetric key to encrypt the message
         box = nacl.secret.SecretBox(symmetric_key)
-        encrypted = box.encrypt(encoded_message).hex()
+        encrypted = box.encrypt(encoded_message)
     except nacl.exceptions.CryptoError as e:
         print('Encryption failed: ' + str(e))
         raise ThresholdCryptoError('Message encryption failed.')
 
-    # Use threshold scheme to encrypt the subgroup element used as hash input to derive the symmetric key
-    g_k, c = _encrypt_key_element(key_subgroup_element, public_key)
+    # Use threshold scheme to encrypt the curve point used as hash input to derive the symmetric key
+    C1, C2 = _encrypt_key_point(key_point, public_key.Q, curve_params)
 
-    return EncryptedMessage(g_k, c, encrypted)
+    return EncryptedMessage(C1, C2, encrypted)
 
 
-def _encrypt_key_element(key_element: int, public_key: PublicKey) -> (int, int):
-    key_params = public_key.key_parameters
+def _key_bytes_from_point(p: ECC.EccPoint) -> bytes:
+    key_point_byte_length = (int(p.x).bit_length() + 7) // 8
+    point_bytes = int(p.x).to_bytes(key_point_byte_length, byteorder='big')
+    return point_bytes
 
-    if key_element >= key_params.p:
-        raise ThresholdCryptoError('key element is larger than key parameter p')
 
-    k = number.getRandomRange(1, key_params.q - 1)
-    g_k = pow(key_params.g, k, key_params.p)  # aka v
-    g_ak = pow(public_key.g_a, k, key_params.p)
-    c = (key_element * g_ak) % key_params.p
+def _encrypt_key_point(key_point: ECC.EccPoint, Q: ECC.EccPoint, curve_params: CurveParameters) -> (ECC.EccPoint, ECC.EccPoint):
+    k = number.getRandomRange(1, curve_params.order)
+    C1 = k * curve_params.P
+    kQ = k * Q
+    C2 = key_point + kQ
 
-    return g_k, c
+    return C1, C2
 
 
 # decryption
@@ -131,8 +131,7 @@ def _encrypt_key_element(key_element: int, public_key: PublicKey) -> (int, int):
 
 def decrypt_message(partial_decryptions: [PartialDecryption],
                     encrypted_message: EncryptedMessage,
-                    threshold_params: ThresholdParameters,
-                    key_params: KeyParameters
+                    threshold_params: ThresholdParameters
                     ) -> str:
     """
     Decrypt a message using the combination of at least t partial decryptions. Similar to the encryption process
@@ -141,24 +140,28 @@ def decrypt_message(partial_decryptions: [PartialDecryption],
     :param partial_decryptions: at least t partial decryptions
     :param encrypted_message: the encrapted message to be decrypted
     :param threshold_params: the used threshold parameters
-    :param key_params: the used key parameters
+    :param curve_params: the used curve parameters
     :return: the decrypted message
     """
-    key_subgroup_element = _combine_shares(
+    curve_params = partial_decryptions[0].curve_params
+    for partial_key in partial_decryptions:
+        if partial_key.curve_params != curve_params:
+            raise ThresholdCryptoError("Varying curve parameters found in partial re-encryption keys")
+
+    key_point = _combine_shares(
         partial_decryptions,
         encrypted_message,
         threshold_params,
-        key_params
+        curve_params
     )
-    key_subgroup_element_byte_length = (key_subgroup_element.bit_length() + 7) // 8
-    key_subgroup_element_bytes = key_subgroup_element.to_bytes(key_subgroup_element_byte_length, byteorder='big')
+    point_bytes = _key_bytes_from_point(key_point)
 
     try:
-        key = nacl.hash.blake2b(key_subgroup_element_bytes,
+        key = nacl.hash.blake2b(point_bytes,
                                 digest_size=nacl.secret.SecretBox.KEY_SIZE,
                                 encoder=nacl.encoding.RawEncoder)
         box = nacl.secret.SecretBox(key)
-        encoded_plaintext = box.decrypt(bytes.fromhex(encrypted_message.enc))
+        encoded_plaintext = box.decrypt(encrypted_message.ciphertext)
     except nacl.exceptions.CryptoError as e:
         raise ThresholdCryptoError('Message decryption failed. Internal: ' + str(e))
 
@@ -168,25 +171,22 @@ def decrypt_message(partial_decryptions: [PartialDecryption],
 def _combine_shares(partial_decryptions: [PartialDecryption],
                    encrypted_message: EncryptedMessage,
                    threshold_params: ThresholdParameters,
-                   key_params: KeyParameters
-                   ) -> int:
+                   curve_params: CurveParameters
+                   ) -> ECC.EccPoint:
     # Disabled to enable testing for unsuccessful decryption
     # if len(partial_decryptions) < threshold_params.t:
     #    raise ThresholdCryptoError('less than t partial decryptions given')
 
     # compute lagrange coefficients
     partial_indices = [dec.x for dec in partial_decryptions]
-    lagrange_coefficients = number.build_lagrange_coefficients(partial_indices, key_params.q)
+    lagrange_coefficients = number.build_lagrange_coefficients(partial_indices, curve_params.order)
 
-    factors = [
-        pow(partial_decryptions[i].v_y, lagrange_coefficients[i], key_params.p)
-        for i in range(0, len(partial_decryptions))
-    ]
-    restored_g_ka = number.prod(factors) % key_params.p
-    restored_g_minus_ak = number.prime_mod_inv(restored_g_ka, key_params.p)
-    restored_m = encrypted_message.c * restored_g_minus_ak % key_params.p
+    summands = [lagrange_coefficients[i] * partial_decryptions[i].yC1 for i in range(0, len(partial_decryptions))]
+    restored_kdP = number.ecc_sum(summands)
 
-    return restored_m
+    restored_point = encrypted_message.C2 + (-restored_kdP)
+
+    return restored_point
 
 
 # re-encryption
