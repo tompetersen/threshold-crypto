@@ -291,21 +291,32 @@ class PartialDecryption(ThresholdDataClass):
         return 'PartialDecryption (x, yC1) = ({}, {}) (on curve {})'.format(self.x, self.yC1, self.curve_params._name)
 
 
-class PartialReEncryptionKey:
+class PartialReEncryptionKey(ThresholdDataClass):
     """
-    TBD
+    A partial re-encryption key, which can be combined with others to yield the final re-encryption key.
     """
 
-    def __init__(self, partial_key: int, key_params: KeyParameters):
+    def __init__(self, partial_key: int, curve_params: CurveParameters):
         """
-        TBD
+        Construct a partial re-encryption key.
+
         :param partial_key: The difference of (λ2_i * y2_i - λ1_i * y1_i) where *1 are the old and *2 the new components
+        :param curve_params: The used curve parameters
         """
+        if partial_key < 0 or partial_key > curve_params.order:
+            raise ThresholdCryptoError('Invalid partial key')
+
         self.partial_key = partial_key
-        self.key_params = key_params
+        self.curve_params = curve_params
 
+    def __eq__(self, other):
+        return (isinstance(other, self.__class__) and
+                self.partial_key == other.partial_key and
+                self.curve_params == other.curve_params)
 
-class ReEncryptionKey:
+    def __str__(self):
+        return 'PartialReEncryptionKey λ2_i * y2_i - λ1_i * y1_i = {} (for curve {})'.format(self.partial_key, self.curve_params._name)
+
     """
     TBD
     """
