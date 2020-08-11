@@ -26,6 +26,8 @@ Usage:
     # combine these partial decryptions to recover the message
     decrypted_message = ThresholdCrypto.decrypt_message(partial_decryptions, encrypted_message, thresh_params, key_params)
 """
+import base64
+import collections
 import json
 
 
@@ -33,7 +35,25 @@ class ThresholdCryptoError(Exception):
     pass
 
 
-class ThresholdParameters:
+class ThresholdDataClass:
+    """ Baseclass for ThresholdCrypto data classes. """
+
+    def __init__(self):
+        raise NotImplementedError("Implement __init__ in subclass when using ThresholdDataClass")
+
+    def to_json(self):
+        """ Create json representation of object. Some special cases are already handled here. """
+        dict = self.__dict__.copy()
+        return json.dumps(dict)
+
+    @classmethod
+    def from_json(cls, json_str: str):
+        """ Create object from json representation. Some special cases are already handled here. """
+        dict = json.loads(json_str)
+        return cls(**dict)
+
+
+class ThresholdParameters(ThresholdDataClass):
     """
     Contains the parameters used for the threshold scheme:
     - t: number of share owners required to decrypt a message
@@ -42,15 +62,6 @@ class ThresholdParameters:
     In other words:
     At least t out of overall n share owners must participate to decrypt an encrypted message.
     """
-
-    @staticmethod
-    def from_json(json_str: str):
-        obj = json.loads(json_str)
-        return ThresholdParameters.from_dict(obj)
-
-    @staticmethod
-    def from_dict(obj: dict):
-        return ThresholdParameters(obj['t'], obj['n'])
 
     def __init__(self, t: int, n: int):
         """
@@ -65,33 +76,16 @@ class ThresholdParameters:
         if t <= 0:
             raise ThresholdCryptoError('threshold parameter t must be greater than 0')
 
-        self._t = t
-        self._n = n
-
-    @property
-    def t(self) -> int:
-        return self._t
-
-    @property
-    def n(self) -> int:
-        return self._n
-
-    def to_dict(self):
-        return {
-            't': self._t,
-            'n': self._n
-        }
-
-    def to_json(self) -> str:
-        return json.dumps(self.to_dict())
+        self.t = t
+        self.n = n
 
     def __eq__(self, other):
         return (isinstance(other, self.__class__) and
-               self.t == other.t and
-               self.n == other.n)
+                self.t == other.t and
+                self.n == other.n)
 
     def __str__(self):
-        return 'ThresholdParameters: t = %d, n = %d)' % (self._t, self._n)
+        return 'ThresholdParameters ({}, {})'.format(self.t, self.n)
 
 
 class KeyParameters:
