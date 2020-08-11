@@ -226,14 +226,14 @@ class DkgTestCase(unittest.TestCase):
 
     def setUp(self):
         self.tp = ThresholdParameters(3, 5)
-        self.kp = central.static_512_key_parameters()
+        self.cp = CurveParameters()
         self.message = 'Some secret message'
 
     def tearDown(self):
         pass
 
     def test_distributed_key_generation(self):
-        participants = [Participant(id, self.kp, self.tp) for id in range(1, self.tp.n + 1)]
+        participants = [participant.Participant(id, self.cp, self.tp) for id in range(1, self.tp.n + 1)]
 
         # steps for Pedersen DKG protocol
         for pi in participants:
@@ -252,7 +252,7 @@ class DkgTestCase(unittest.TestCase):
             p.compute_share()
 
         p_his = [p.h_i for p in participants]
-        public_key = central.create_public_key(p_his, self.kp, self.tp)
+        public_key = central.create_public_key(p_his, self.cp, self.tp)
 
         # test encryption/decryption
 
@@ -260,6 +260,6 @@ class DkgTestCase(unittest.TestCase):
 
         shares = [p.key_share for p in participants]
         pdms = [participant.compute_partial_decryption(em, ks) for ks in shares[:self.tp.t]]
-        dm = central.decrypt_message(pdms, em, self.tp, self.kp)
+        dm = central.decrypt_message(pdms, em, self.tp)
 
         self.assertEqual(dm, self.message)
