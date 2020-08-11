@@ -175,69 +175,32 @@ class PublicKey(ThresholdDataClass):
         return 'Public key point Q = {} (on curve {})'.format(self.Q, self.curve_params._name)
 
 
-class KeyShare:
+class KeyShare(ThresholdDataClass):
     """
-    A share (x_i, y_i) of the private key for share owner i.
+    A share (x_i, y_i) of the secret key d for share owner i.
     y_i is the evaluated polynom value of x_i in shamirs secret sharing.
     """
 
-    @staticmethod
-    def from_json(json_str: str):
-        obj = json.loads(json_str)
-        return KeyShare.from_dict(obj)
-
-    @staticmethod
-    def from_dict(obj: dict):
-        key_params = KeyParameters.from_dict(obj)
-        return KeyShare(obj['x'], obj['y'], key_params)
-
-    def __init__(self, x: int, y: int, key_params: KeyParameters):
+    def __init__(self, x: int, y: int, curve_params: CurveParameters):
         """
-        Construct a share of the private key.
+        Construct a share of the private key d.
 
         :param x: the x value of the share
         :param y: the y value of the share
-        :param key_params:
+        :param curve_params: the curve parameters used
         """
-        if key_params is None:
-            raise ThresholdCryptoError('key parameters must be given')
-
-        self._x = x
-        self._y = y
-        self._key_params = key_params
-
-    @property
-    def x(self) -> int:
-        return self._x
-
-    @property
-    def y(self) -> int:
-        return self._y
-
-    @property
-    def key_parameters(self) -> KeyParameters:
-        return self._key_params
-
-    def to_dict(self):
-        return {
-            'p': self.key_parameters.p,
-            'q': self.key_parameters.q,
-            'g': self.key_parameters.g,
-            'x': self.x,
-            'y': self.y,
-        }
-
-    def to_json(self):
-        return json.dumps(self.to_dict())
+        self.x = x
+        self.y = y
+        self.curve_params = curve_params
 
     def __eq__(self, other):
         return (isinstance(other, self.__class__) and
-                self.key_parameters == other.key_parameters and
+                self.curve_params == other.curve_params and
                 self.x == other.x and
                 self.y == other.y)
 
     def __str__(self):
-        return 'KeyShare:\n\tx = %d\n\ty = %d' % (self._x, self._y)
+        return 'KeyShare (x,y) = ({}, {}) (on curve {})'.format(self.x, self.y, self.curve_params._name)
 
 
 class EncryptedMessage:
