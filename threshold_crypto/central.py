@@ -3,36 +3,37 @@ import nacl.secret
 import nacl.encoding
 import nacl.exceptions
 import nacl.hash
-from threshold_crypto.data import KeyParameters, ThresholdParameters, PublicKey, KeyShare, PartialDecryption, \
-    EncryptedMessage, ThresholdCryptoError, PartialReEncryptionKey, ReEncryptionKey
-from threshold_crypto import number, Participant
+from Crypto.PublicKey import ECC
 
+from threshold_crypto.data import CurveParameters, ThresholdParameters, KeyShare, PartialDecryption, \
+    EncryptedMessage, ThresholdCryptoError, PartialReEncryptionKey, ReEncryptionKey, PublicKey
+from threshold_crypto import number
 
 
 # key generation
 
 
-def create_public_key_and_shares_centralized(key_params: KeyParameters, threshold_params: ThresholdParameters) -> (PublicKey, [KeyShare]):
+def create_public_key_and_shares_centralized(curve_params: CurveParameters, threshold_params: ThresholdParameters) -> (ECC.EccPoint, [KeyShare]):
     """
     Creates a public key and n shares by choosing a random secret key and using it for computations.
 
-    :param key_params: key parameters to use
+    :param curve_params: curve parameters to use
     :param threshold_params: parameters t and n for the threshold scheme
     :return: (the public key, n key shares)
     """
-    a = number.getRandomRange(2, key_params.q - 2)
-    g_a = pow(key_params.g, a, key_params.p)
-    public_key = PublicKey(g_a, key_params)
+    d = number.getRandomRange(1, curve_params.order)
+    Q = d * curve_params.P
+    pk = PublicKey(Q, curve_params)
 
     # Perform Shamir's secret sharing in Z_q
-    polynom = number.PolynomMod.create_random_polynom(a, threshold_params.t - 1, key_params.q)
+    polynom = number.PolynomMod.create_random_polynom(d, threshold_params.t - 1, curve_params.order)
     supporting_points = range(1, threshold_params.n + 1)
-    shares = [KeyShare(x, polynom.evaluate(x), key_params) for x in supporting_points]
+    shares = [KeyShare(x, polynom.evaluate(x), curve_params) for x in supporting_points]
 
-    return public_key, shares
+    return pk,shares
 
 
-def create_public_key(participants_h_i: [int], key_params: KeyParameters, threshold_params: ThresholdParameters) -> PublicKey:
+def create_public_key(participants_h_i: [ECC.EccPoint], curve_parameters: CurveParameters, threshold_params: ThresholdParameters) -> PublicKey:
     """
     Pedersen91-related
 
@@ -43,14 +44,16 @@ def create_public_key(participants_h_i: [int], key_params: KeyParameters, thresh
     if len(participants_h_i) != threshold_params.n:
         raise ThresholdCryptoError('number of participants h_i values {} != {} = n'.format(len(participants_h_i), threshold_params.n))
 
-    h = number.prod(participants_h_i) % key_params.p
-    return PublicKey(h, key_params)
+    h = number.ecc_sum(participants_h_i)
+
+    return PublicKey(h, curve_parameters)
 
 
-def restore_priv_key(key_params: KeyParameters, shares: [KeyShare], treshold_params: ThresholdParameters):
+def restore_priv_key(curve_params: CurveParameters, shares: [KeyShare], treshold_params: ThresholdParameters):
     """
     Combine multiple key shares to compute the (implicit) private key.
-    Just used for testing purposes - should never be used in a real scenario, if you don't have a special reason for this!
+
+    ATTENTION: Just used for testing purposes - should never be used in a real scenario, if you don't have a special reason for this!
 
     :param key_params:
     :param shares:
@@ -61,11 +64,11 @@ def restore_priv_key(key_params: KeyParameters, shares: [KeyShare], treshold_par
     x_shares = [share.x for share in used_shares]
     y_shares = [share.y for share in used_shares]
 
-    lagrange_coefficients = number.build_lagrange_coefficients(x_shares, key_params.q)
+    lagrange_coefficients = number.build_lagrange_coefficients(x_shares, curve_params.order)
 
-    restored_a = sum([(lagrange_coefficients[i] * y_shares[i]) for i in range(0, len(used_shares))]) % key_params.q
+    restored_secret = sum([(lagrange_coefficients[i] * y_shares[i]) for i in range(0, len(used_shares))]) % curve_params.order
 
-    return restored_a
+    return restored_secret
 
 
 # encryption
