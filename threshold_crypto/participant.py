@@ -66,7 +66,7 @@ class Participant:
 
     """
 
-    def __init__(self, node_id: int, key_params: KeyParameters, threshold_params: ThresholdParameters):
+    def __init__(self, node_id: int, curve_params: CurveParameters, threshold_params: ThresholdParameters):
         """
 
 
@@ -74,16 +74,16 @@ class Participant:
         :param key_params:
         :param threshold_params:
         """
-        self.a_i = number.getRandomRange(0, key_params.q - 1)  # Pedersen91 x_i from Z_q
-        self.h_i = pow(key_params.g, self.a_i, key_params.p)
+        self.x_i = number.getRandomRange(0, curve_params.order)  # Pedersen91 x_i from Z_q
+        self.h_i = self.x_i * curve_params.P
         self.node_id = node_id
-        self.key_params = key_params
+        self.curve_params = curve_params
         self.threshold_params = threshold_params
 
-        self._polynom = number.PolynomMod.create_random_polynom(self.a_i, self.threshold_params.t - 1, self.key_params.q)
+        self._polynom = number.PolynomMod.create_random_polynom(self.x_i, self.threshold_params.t - 1, curve_params.order)
         self._local_F_ij = []
         for coeff in self._polynom.coefficients:
-            self._local_F_ij.append(pow(self.key_params.g, coeff, self.key_params.p))
+            self._local_F_ij.append(coeff * curve_params.P)
 
         self._local_sij = {}
         self._received_F = {}  # received F_ij values from all participants
@@ -93,9 +93,9 @@ class Participant:
         self.key_share = None
 
     def __str__(self):
-        return "Participant[node_id = {}, a_i = {}, h_i = {}, s_i = {}".format(self.node_id, self.a_i, self.h_i, self.s_i)
+        return "Participant[node_id = {}, a_i = {}, h_i = {}, s_i = {}".format(self.node_id, self.x_i, self.h_i, self.s_i)
 
-    def receive_F(self, node_id: int, node_F_ij: [int]):
+    def receive_F(self, node_id: int, node_F_ij: [ECC.EccPoint]):
         if len(node_F_ij) != self.threshold_params.t:
             raise ThresholdCryptoError("list of F_ij for node {} has length {} != {} = t".format(node_id, len(node_F_ij), self.threshold_params.t))
 
@@ -119,17 +119,17 @@ class Participant:
             raise ThresholdCryptoError("s_ij value for node {} already received".format(node_id))
 
         # verify received F values
-        g_s_ij = pow(self.key_params.g, received_sij, self.key_params.p)
-        F_list = [(F_jl ** (self.node_id ** l)) for l, F_jl in enumerate(self._received_F[node_id])]
-        F_product = number.prod(F_list) % self.key_params.p
+        s_ijP = received_sij * self.curve_params.P
+        F_list = [(self.node_id ** l) * F_jl for l, F_jl in enumerate(self._received_F[node_id])]
+        F_sum = number.ecc_sum(F_list)
 
-        if g_s_ij != F_product:
+        if s_ijP != F_sum:
             raise ThresholdCryptoError("F verification failed for node {}".format(node_id))
 
     def compute_share(self):
         if len(self._received_sij) != self.threshold_params.n:
             raise ThresholdCryptoError("received less sij values than necessary: {} != {} = n".format(len(self._received_sij), self.threshold_params.t))
 
-        self.s_i = sum(self._received_sij.values()) % self.key_params.q
-        self.key_share = KeyShare(self.node_id, self.s_i, self.key_params)
+        self.s_i = sum(self._received_sij.values()) % self.curve_params.order
+        self.key_share = KeyShare(self.node_id, self.s_i, self.curve_params)
 
