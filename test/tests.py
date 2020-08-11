@@ -179,8 +179,8 @@ class PreTestCase(unittest.TestCase):
 
     def setUp(self):
         self.tp = ThresholdParameters(3, 5)
-        self.kp = central.static_512_key_parameters()
-        self.pk, self.shares = central.create_public_key_and_shares_centralized(self.kp, self.tp)
+        self.cp = CurveParameters()
+        self.pk, self.shares = central.create_public_key_and_shares_centralized(self.cp, self.tp)
         self.message = 'Some secret message'
         self.em = central.encrypt_message(self.message, self.pk)
         self.reconstruct_shares = [self.shares[i] for i in [0, 2, 4]]  # choose 3 of 5 key shares
@@ -190,9 +190,21 @@ class PreTestCase(unittest.TestCase):
     def tearDown(self):
         pass
 
+    def test_partial_re_encryption_key_json(self):
+        prek = PartialReEncryptionKey(partial_key=17, curve_params=self.cp)
+        prek_j = PartialReEncryptionKey.from_json(prek.to_json())
+
+        self.assertEqual(prek, prek_j)
+
+    def test_re_encryption_key_json(self):
+        rek = ReEncryptionKey(key=42, curve_params=CurveParameters())
+        rek_j = ReEncryptionKey.from_json(rek.to_json())
+
+        self.assertEqual(rek, rek_j)
+
     def test_re_encryption_process_for_same_access_structures(self):
         """ """
-        new_pk, new_shares = central.create_public_key_and_shares_centralized(self.kp, self.tp)
+        new_pk, new_shares = central.create_public_key_and_shares_centralized(self.cp, self.tp)
 
         assert new_pk != self.pk, "Public keys for new and old access structure are the same"
 
@@ -201,8 +213,8 @@ class PreTestCase(unittest.TestCase):
         partial_re_encrypt_keys = []
 
         for i, (s_old, s_new) in enumerate(zip(t_old_shares, t_new_shares)):
-            old_lambda = participant._compute_lagrange_coefficient_for_key_shares(t_old_shares, i)
-            new_lambda = participant._compute_lagrange_coefficient_for_key_shares(t_new_shares, i)
+            old_lambda = participant._compute_lagrange_coefficient_for_key_shares(t_old_shares, self.cp, i)
+            new_lambda = participant._compute_lagrange_coefficient_for_key_shares(t_new_shares, self.cp, i)
             partial_key = participant.compute_partial_re_encryption_key(s_old, old_lambda, s_new, new_lambda)
             partial_re_encrypt_keys.append(partial_key)
 
@@ -214,7 +226,7 @@ class PreTestCase(unittest.TestCase):
         new_reconstruct_shares = [new_shares[i] for i in [0, 2, 4]]
         new_partial_decryptions = [participant.compute_partial_decryption(re_em, share) for share in new_reconstruct_shares]
 
-        decrypted_message = central.decrypt_message(new_partial_decryptions, re_em, self.tp, self.kp)
+        decrypted_message = central.decrypt_message(new_partial_decryptions, re_em, self.tp)
 
         self.assertEqual(self.message, decrypted_message)
 
