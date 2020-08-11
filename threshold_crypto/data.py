@@ -39,6 +39,7 @@ class ThresholdCryptoError(Exception):
 
 class ThresholdDataClass:
     """ Baseclass for ThresholdCrypto data classes. """
+    CURVE_MAGIC = "ECURVE|"
 
     def __init__(self):
         raise NotImplementedError("Implement __init__ in subclass when using ThresholdDataClass")
@@ -46,12 +47,37 @@ class ThresholdDataClass:
     def to_json(self):
         """ Create json representation of object. Some special cases are already handled here. """
         dict = self.__dict__.copy()
+
+        for k in dict:
+            # special handling of curve parameters
+            if isinstance(dict[k], CurveParameters):
+                dict[k] = self.CURVE_MAGIC + dict[k]._name
+
+            # special handling of curve points
+            if isinstance(dict[k], ECC.EccPoint):
+                p = dict[k]
+                dict[k] = {
+                    "x": int(p.x),
+                    "y": int(p.y),
+                    "curve": p._curve_name,
+                }
+
         return json.dumps(dict)
 
     @classmethod
     def from_json(cls, json_str: str):
         """ Create object from json representation. Some special cases are already handled here. """
         dict = json.loads(json_str)
+
+        for k in dict:
+            # special handling of curve parameters
+            if isinstance(dict[k], str) and dict[k].startswith(cls.CURVE_MAGIC):
+                dict[k] = CurveParameters(curve_name=dict[k][len(cls.CURVE_MAGIC):])
+
+            # special handling of curve points
+            if isinstance(dict[k], collections.Mapping) and "x" in dict[k] and "y" in dict[k] and "curve" in dict[k]:
+                dict[k] = ECC.EccPoint(**dict[k])
+
         return cls(**dict)
 
 
@@ -125,60 +151,28 @@ class CurveParameters(ThresholdDataClass):
         return "Curve {} of order {} with generator point P = {}".format(self._name, self.order, self.P)
 
 
-class PublicKey:
+class PublicKey(ThresholdDataClass):
     """
-    The public key (g^a mod p) linked to the (implicit) secret key (a) of the scheme.
+    The public key point Q linked to the (implicit) secret key d of the scheme.
     """
 
-    @staticmethod
-    def from_json(json_str: str):
-        obj = json.loads(json_str)
-        return PublicKey.from_dict(obj)
-
-    @staticmethod
-    def from_dict(obj: dict):
-        key_params = KeyParameters.from_dict(obj)
-        return PublicKey(obj['g_a'], key_params)
-
-    def __init__(self, g_a: int, key_params: KeyParameters):
+    def __init__(self, Q: ECC.EccPoint, curve_params: CurveParameters = CurveParameters()):
         """
         Construct the public key.
 
-        :param g_a: the public key value
-        :param key_params: the key parameters used for constructing the key.
+        :param Q: the public key point Q = dP
+        :param curve_params: the curve parameters used for constructing the key.
         """
-        if key_params is None:
-            raise ThresholdCryptoError('key parameters must be given')
-
-        self._g_a = g_a
-        self._key_params = key_params
-
-    @property
-    def g_a(self) -> int:
-        return self._g_a
-
-    @property
-    def key_parameters(self) -> KeyParameters:
-        return self._key_params
-
-    def to_dict(self):
-        return {
-            'p': self._key_params.p,
-            'q': self._key_params.q,
-            'g': self._key_params.g,
-            'g_a': self._g_a,
-        }
-
-    def to_json(self):
-        return json.dumps(self.to_dict())
+        self.Q = Q
+        self.curve_params = curve_params
 
     def __eq__(self, other):
         return (isinstance(other, self.__class__) and
-                self.key_parameters == other.key_parameters and
-                self.g_a == other.g_a)
+                self.curve_params == other.curve_params and
+                self.Q == other.Q)
 
     def __str__(self):
-        return 'PublicKey:\n\tg^a = ' + str(self._g_a)
+        return 'Public key point Q = {} (on curve {})'.format(self.Q, self.curve_params._name)
 
 
 class KeyShare:
