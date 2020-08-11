@@ -265,54 +265,30 @@ class EncryptedMessage:
         return 'EncryptedMessage:\n\tv = %d\n\tc = %d\n\tenc = %s' % (self._v, self._c, self._enc)
 
 
-class PartialDecryption:
+class PartialDecryption(ThresholdDataClass):
     """
-    A partial decryption (x_i, v^(y_i)) of an encrypted message computed by a share owner using his share.
+    A partial decryption of an encrypted message computed by a share owner using his share.
     """
 
-    @staticmethod
-    def from_json(json_str: str):
-        obj = json.loads(json_str)
-        return PartialDecryption.from_dict(obj)
-
-    @staticmethod
-    def from_dict(obj: dict):
-        return PartialDecryption(obj['x'], obj['v_y'])
-
-    def __init__(self, x: int, v_y: int):
+    def __init__(self, x: int, yC1: ECC.EccPoint, curve_params: CurveParameters):
         """
         Construct the partial decryption.
 
         :param x: the shares x value
-        :param v_y: the computed partial decryption value
+        :param yC1: the computed partial decryption value
         """
-        self._x = x
-        self._v_y = v_y
-
-    @property
-    def x(self) -> int:
-        return self._x
-
-    @property
-    def v_y(self) -> int:
-        return self._v_y
-
-    def to_dict(self):
-        return {
-            'x': self.x,
-            'v_y': self.v_y,
-        }
-
-    def to_json(self):
-        return json.dumps(self.to_dict())
+        self.x = x
+        self.yC1 = yC1
+        self.curve_params = curve_params
 
     def __eq__(self, other):
         return (isinstance(other, self.__class__) and
                 self.x == other.x and
-                self.v_y == other.v_y)
+                self.yC1 == other.yC1 and
+                self.curve_params == other.curve_params)
 
     def __str__(self):
-        return 'PartialDecryption:\n\tx = %d\n\tv^y = %d' % (self._x, self._v_y)
+        return 'PartialDecryption (x, yC1) = ({}, {}) (on curve {})'.format(self.x, self.yC1, self.curve_params._name)
 
 
 class PartialReEncryptionKey:
