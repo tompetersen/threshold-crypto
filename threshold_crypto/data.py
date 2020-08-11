@@ -39,6 +39,7 @@ class ThresholdCryptoError(Exception):
 
 class ThresholdDataClass:
     """ Baseclass for ThresholdCrypto data classes. """
+    BASE64_MAGIC = "BASE64|"
     CURVE_MAGIC = "ECURVE|"
 
     def __init__(self):
@@ -49,6 +50,10 @@ class ThresholdDataClass:
         dict = self.__dict__.copy()
 
         for k in dict:
+            # special handling of bytes
+            if isinstance(dict[k], bytes):
+                dict[k] = self.BASE64_MAGIC + base64.b64encode(dict[k]).decode('ascii')
+
             # special handling of curve parameters
             if isinstance(dict[k], CurveParameters):
                 dict[k] = self.CURVE_MAGIC + dict[k]._name
@@ -70,6 +75,10 @@ class ThresholdDataClass:
         dict = json.loads(json_str)
 
         for k in dict:
+            # special handling of bytes
+            if isinstance(dict[k], str) and dict[k].startswith(cls.BASE64_MAGIC):
+                dict[k] = base64.b64decode(dict[k][len(cls.BASE64_MAGIC):].encode('ascii'))
+
             # special handling of curve parameters
             if isinstance(dict[k], str) and dict[k].startswith(cls.CURVE_MAGIC):
                 dict[k] = CurveParameters(curve_name=dict[k][len(cls.CURVE_MAGIC):])
@@ -203,66 +212,45 @@ class KeyShare(ThresholdDataClass):
         return 'KeyShare (x,y) = ({}, {}) (on curve {})'.format(self.x, self.y, self.curve_params._name)
 
 
-class EncryptedMessage:
+class EncryptedMessage(ThresholdDataClass):
+    # TODO include curve_params?
     """
     An encrypted message in the scheme. Because a hybrid approach is used it consists of three parts:
-    - v = g^k mod p as in the ElGamal scheme
-    - c = r * g^ak mod p as in the ElGamal scheme with r being the value to be encrypted
-    - enc the symmetrically encrypted message.
-    The symmetric key is derived from the ElGamal encrypted value r.
+
+    - C1 = kP as in the ElGamal scheme
+    - C2 = kQ + rP as in the ElGamal scheme with rP being the encrypted point for a random value r
+    - ciphertext, the symmetrically encrypted message.
+
+    The symmetric key is derived from the ElGamal encrypted point rP.
+
+    Note: The ECIES approach for ECC
+    - chooses a random r,
+    - computes R=rP and S=rQ,
+    - derives a symmetric key k from S,
+    - uses R and the symmetric encryption of m as ciphertext.
+    But to enable the re-encryption of ciphertexts, here the approach similar to regular ElGamal is used instead.
     """
 
-    @staticmethod
-    def from_json(json_str: str):
-        obj = json.loads(json_str)
-        return EncryptedMessage.from_dict(obj)
-
-    @staticmethod
-    def from_dict(obj: dict):
-        return EncryptedMessage(obj['v'], obj['c'], obj['enc'])
-
-    def __init__(self, v: int, c: int, enc: str):
+    def __init__(self, C1: ECC.EccPoint, C2: ECC.EccPoint, ciphertext: bytes):
         """
         Construct a encrypted message.
 
         :param v: like in ElGamal scheme
         :param c: like in ElGamal scheme
-        :param enc: the symmetrically encrypted message
+        :param ciphertext: the symmetrically encrypted message
         """
-        self._v = v
-        self._c = c
-        self._enc = enc
-
-    @property
-    def v(self) -> int:
-        return self._v
-
-    @property
-    def c(self) -> int:
-        return self._c
-
-    @property
-    def enc(self) -> str:
-        return self._enc
-
-    def to_dict(self):
-        return {
-            'v': self.v,
-            'c': self.c,
-            'enc': self.enc,
-        }
-
-    def to_json(self):
-        return json.dumps(self.to_dict())
+        self.C1 = C1
+        self.C2 = C2
+        self.ciphertext = ciphertext
 
     def __eq__(self, other):
         return (isinstance(other, self.__class__) and
-                self.v == other.v and
-                self.c == other.c and
-                self.enc == other.enc)
+                self.C1 == other.C1 and
+                self.C2 == other.C2 and
+                self.ciphertext == other.ciphertext)
 
     def __str__(self):
-        return 'EncryptedMessage:\n\tv = %d\n\tc = %d\n\tenc = %s' % (self._v, self._c, self._enc)
+        return 'EncryptedMessage (C1, C2, ciphertext) = ({}, {}, {}))'.format(self.C1, self.C2, self.ciphertext)
 
 
 class PartialDecryption(ThresholdDataClass):
