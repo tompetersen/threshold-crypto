@@ -30,6 +30,8 @@ import base64
 import collections
 import json
 
+from Crypto.PublicKey import ECC
+
 
 class ThresholdCryptoError(Exception):
     pass
@@ -88,72 +90,39 @@ class ThresholdParameters(ThresholdDataClass):
         return 'ThresholdParameters ({}, {})'.format(self.t, self.n)
 
 
-class KeyParameters:
+class CurveParameters(ThresholdDataClass):
     """
-    Contains the key parameters the scheme uses:
-    - Primes p, q with p = 2q + 1
-    - Generator g of q-ordered subgroup Z_q* of Z_p*
+    Contains the curve parameters the scheme uses. Since PyCryptodome is used, only curves present there are available:
+    https://pycryptodome.readthedocs.io/en/latest/src/public_key/ecc.html
     """
+    DEFAULT_CURVE = 'P-256'
 
-    @staticmethod
-    def from_json(json_str: str):
-        obj = json.loads(json_str)
-        return KeyParameters.from_dict(obj)
-
-    @staticmethod
-    def from_dict(obj: dict):
-        return KeyParameters(obj['p'], obj['q'], obj['g'])
-
-    def __init__(self, p: int, q: int, g: int):
+    def __init__(self, curve_name: str = DEFAULT_CURVE):
         """
-        Construct key parameters. Required:
-        - p = 2q + 1
-        - g generates Z_q*, meaning (g^q mod p = 1) and (g^2 mod p != 1)
-          These conditions are sufficient because subgroups of Z_p* can only have orders 1, 2, q or 2q.
+        Construct the curve from a given curve name (according to curves present in PyCryptodome).
 
-        :param p: prime
-        :param q: prime
-        :param g: generator for Z_q*
+        :param curve_name:
         """
-        if (2 * q + 1) != p:
-            raise ThresholdCryptoError('no safe prime (p = 2q + 1) given')
-        if pow(g, q, p) != 1 or pow(g, 2, p) == 1:
-            raise ThresholdCryptoError('no generator g for subgroup of order q given')
+        if curve_name not in ECC._curves:
+            raise ThresholdCryptoError('Unsupported curve: ' + curve_name)
 
-        self._p = p
-        self._q = q
-        self._g = g
+        self._name = curve_name
+        self._curve = ECC._curves[curve_name]
+        self.P = ECC.EccPoint(x=self._curve.Gx, y=self._curve.Gy, curve=curve_name)
 
     @property
-    def p(self) -> int:
-        return self._p
-
-    @property
-    def q(self) -> int:
-        return self._q
-
-    @property
-    def g(self) -> int:
-        return self._g
-
-    def to_dict(self):
-        return {
-            'p': self._p,
-            'q': self._q,
-            'g': self._g
-        }
+    def order(self):
+        return int(self._curve.order)
 
     def to_json(self):
-        return json.dumps(self.to_dict())
+        return json.dumps({'curve_name': self._name})
 
     def __eq__(self, other):
         return (isinstance(other, self.__class__) and
-                self.p == other.p and
-                self.q == other.q and
-                self.g == other.g)
+                self._curve == other._curve)
 
     def __str__(self):
-        return 'KeyParameters:\n\tp = %d\n\tq = %d\n\tg = %d' % (self._p, self._q, self._g)
+        return "Curve {} of order {} with generator point P = {}".format(self._name, self.order, self.P)
 
 
 class PublicKey:
