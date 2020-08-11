@@ -203,14 +203,14 @@ def combine_partial_re_encryption_keys(partial_keys: [PartialReEncryptionKey], o
     if len(partial_keys) < new_threshold_params.t or len(partial_keys) < 1:
         raise ThresholdCryptoError("Not enough partial re-encryption keys given")
 
-    key_params = partial_keys[0].key_params
+    curve_params = partial_keys[0].curve_params
     for partial_key in partial_keys:
-        if partial_key.key_params != key_params:
-            raise ThresholdCryptoError("Varying key params found in partial re-encryption keys")
+        if partial_key.curve_params != curve_params:
+            raise ThresholdCryptoError("Varying curve parameters found in partial re-encryption keys")
 
-    re_key = sum([k.partial_key for k in partial_keys]) % key_params.q
+    re_key = sum([k.partial_key for k in partial_keys]) % curve_params.order
 
-    return ReEncryptionKey(re_key, key_params)
+    return ReEncryptionKey(re_key, curve_params)
 
 
 def re_encrypt_message(em: EncryptedMessage, re_key: ReEncryptionKey) -> EncryptedMessage:
@@ -220,7 +220,6 @@ def re_encrypt_message(em: EncryptedMessage, re_key: ReEncryptionKey) -> Encrypt
     :param re_key:
     :return:
     """
-    p = re_key.key_params.p
-    re_enc_c = em.c * pow(em.v, re_key.key, p) % p
+    re_enc_c = em.C2 + em.C1 * re_key.key
 
-    return EncryptedMessage(em.v, re_enc_c, em.enc)
+    return EncryptedMessage(em.C1, re_enc_c, em.ciphertext)
