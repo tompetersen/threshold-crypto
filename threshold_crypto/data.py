@@ -317,14 +317,30 @@ class PartialReEncryptionKey(ThresholdDataClass):
     def __str__(self):
         return 'PartialReEncryptionKey λ2_i * y2_i - λ1_i * y1_i = {} (for curve {})'.format(self.partial_key, self.curve_params._name)
 
+
+class ReEncryptionKey(ThresholdDataClass):
     """
-    TBD
+    The re-encryption key created from combined partial re-encryption keys. It can be used to re-encrypt ciphertexts
+    encrypted for access structure A to ciphertexts decryptable by access structure B.
     """
 
-    def __init__(self, key, key_params: KeyParameters):
+    def __init__(self, key: int, curve_params: CurveParameters):
         """
+        Construct the re-encryption key
 
-        :param key: the reencryption key (y2 - y1) meaning old private key minus new private key
+        :param key: the reencryption key (dB - dA) meaning new private key minus old private key obtained by combing partial re-encryption keys
+        :param curve_params: The used curve parameters
         """
+        if key < 0 or key > curve_params.order:
+            raise ThresholdCryptoError('Invalid re-encryption key')
+
         self.key = key
-        self.key_params = key_params
+        self.curve_params = curve_params
+
+    def __eq__(self, other):
+        return (isinstance(other, self.__class__) and
+                self.key == other.key and
+                self.curve_params == other.curve_params)
+
+    def __str__(self):
+        return 'ReEncryptionKey dB - dA = {} (for curve {})'.format(self.key, self.curve_params._name)
