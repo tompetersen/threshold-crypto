@@ -29,16 +29,17 @@ def compute_partial_re_encryption_key(old_share: KeyShare, old_lambda: int, new_
     :param new_lambda:
     :return:
     """
-    if old_share.key_parameters != new_share.key_parameters:
-        raise ThresholdCryptoError("Key parameters in old and new share differ")
+    curve_params = old_share.curve_params
 
-    key_params = new_share.key_parameters
-    partial_re_key = (new_share.y * new_lambda - old_share.y * old_lambda) % key_params.q
+    if curve_params != new_share.curve_params:
+        raise ThresholdCryptoError('Differing curves not supported for re-encryption!')
 
-    return PartialReEncryptionKey(partial_re_key, key_params)
+    partial_re_key = (new_share.y * new_lambda - old_share.y * old_lambda) % curve_params.order
+
+    return PartialReEncryptionKey(partial_re_key, curve_params)
 
 
-def _compute_lagrange_coefficient_for_key_shares(key_shares: [KeyShare], i: int) -> int:
+def _compute_lagrange_coefficient_for_key_shares(key_shares: [KeyShare], curve_params: CurveParameters, i: int) -> int:
     """
     Create the ith Lagrange coefficient for a list of key shares.
 
@@ -51,14 +52,13 @@ def _compute_lagrange_coefficient_for_key_shares(key_shares: [KeyShare], i: int)
     :return:
     """
     x_values = [share.x for share in key_shares]
-    key_params = key_shares[0].key_parameters
     k_tmp = len(x_values)
 
     def x(idx):
         return x_values[idx]
 
-    tmp = [(- x(j) * number.prime_mod_inv(x(i) - x(j), key_params.q)) for j in range(0, k_tmp) if not j == i]
-    return number.prod(tmp) % key_params.q  # lambda_i
+    tmp = [(- x(j) * number.prime_mod_inv(x(i) - x(j), curve_params.order)) for j in range(0, k_tmp) if not j == i]
+    return number.prod(tmp) % curve_params.order  # lambda_i
 
 
 class Participant:
