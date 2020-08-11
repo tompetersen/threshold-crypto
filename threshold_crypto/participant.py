@@ -1,5 +1,8 @@
+
+from Crypto.PublicKey import ECC
+
 from threshold_crypto.data import EncryptedMessage, KeyShare, PartialDecryption, PartialReEncryptionKey, \
-    ThresholdCryptoError, KeyParameters, ThresholdParameters
+    ThresholdCryptoError, CurveParameters, ThresholdParameters
 from threshold_crypto import number
 
 
@@ -11,11 +14,9 @@ def compute_partial_decryption(encrypted_message: EncryptedMessage, key_share: K
     :param key_share: the key share
     :return: a partial decryption
     """
-    key_params = key_share.key_parameters
+    yC1 = encrypted_message.C1 * key_share.y
 
-    v_y = pow(encrypted_message.v, key_share.y, key_params.p)
-
-    return PartialDecryption(key_share.x, v_y)
+    return PartialDecryption(key_share.x, yC1, key_share.curve_params)
 
 
 def compute_partial_re_encryption_key(old_share: KeyShare, old_lambda: int, new_share: KeyShare, new_lambda: int) -> PartialReEncryptionKey:
