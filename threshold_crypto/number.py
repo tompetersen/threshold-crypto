@@ -27,8 +27,24 @@
 import functools
 import math
 import operator
+from typing import List
 
+from Crypto.PublicKey import ECC
 from nacl.utils import random as nacl_random
+
+
+def ecc_sum(points: List[ECC.EccPoint]):
+    """ Compute the sum of a list of EccPoints. """
+    if len(points) == 0:
+        return None
+    elif len(points) == 1:
+        return points[0]
+    else:
+        result = points[0]
+        for point in points[1:]:
+            result += point
+
+        return result
 
 
 def prime_mod_inv(x: int, p: int) -> int:
