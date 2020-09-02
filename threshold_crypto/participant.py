@@ -2,7 +2,7 @@
 from Crypto.PublicKey import ECC
 
 from threshold_crypto.data import EncryptedMessage, KeyShare, PartialDecryption, PartialReEncryptionKey, \
-    ThresholdCryptoError, CurveParameters, ThresholdParameters
+    ThresholdCryptoError, CurveParameters, ThresholdParameters, LagrangeCoefficient
 from threshold_crypto import number
 
 
@@ -19,14 +19,14 @@ def compute_partial_decryption(encrypted_message: EncryptedMessage, key_share: K
     return PartialDecryption(key_share.x, yC1, key_share.curve_params)
 
 
-def compute_partial_re_encryption_key(old_share: KeyShare, old_lambda: int, new_share: KeyShare, new_lambda: int) -> PartialReEncryptionKey:
+def compute_partial_re_encryption_key(old_share: KeyShare, old_lc: LagrangeCoefficient, new_share: KeyShare, new_lc: LagrangeCoefficient) -> PartialReEncryptionKey:
     """
     Compute a partial re-encryption key from a participants old and new share.
 
     :param old_share:
-    :param old_lambda:
+    :param old_lc:
     :param new_share:
-    :param new_lambda:
+    :param new_lc:
     :return:
     """
     curve_params = old_share.curve_params
@@ -34,7 +34,13 @@ def compute_partial_re_encryption_key(old_share: KeyShare, old_lambda: int, new_
     if curve_params != new_share.curve_params:
         raise ThresholdCryptoError('Differing curves not supported for re-encryption!')
 
-    partial_re_key = (new_share.y * new_lambda - old_share.y * old_lambda) % curve_params.order
+    if old_share.x != old_lc.participant_index:
+        raise ThresholdCryptoError('Lagrange coefficient for OLD share was computed for other participant index')
+
+    if new_share.x != new_lc.participant_index:
+        raise ThresholdCryptoError('Lagrange coefficient for NEW share was computed for other participant index')
+
+    partial_re_key = (new_share.y * new_lc.coefficient - old_share.y * old_lc.coefficient) % curve_params.order
 
     return PartialReEncryptionKey(partial_re_key, curve_params)
 

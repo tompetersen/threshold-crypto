@@ -1,6 +1,7 @@
 import base64
 import collections
 import json
+from typing import Iterable
 
 from Crypto.PublicKey import ECC
 
@@ -223,6 +224,33 @@ class EncryptedMessage(ThresholdDataClass):
 
     def __str__(self):
         return 'EncryptedMessage (C1, C2, ciphertext) = ({}, {}, {}))'.format(self.C1, self.C2, self.ciphertext)
+
+
+class LagrangeCoefficient(ThresholdDataClass):
+    """
+    The Lagrange coefficient for a distinct participant used in partial decryption combination and partial re-encryption key combination.
+    """
+
+    def __init__(self, participant_index: int, used_index_values: Iterable[int], coefficient: int):
+        """
+        Construct the Lagrange coefficient
+
+        :param participant_index: the index (=x value) for the participants share
+        :param used_index_values: all used indices for reconstruction
+        :param coefficient: the computed Lagrange coefficient for participant_index using used_index_values
+        """
+        self.participant_index = participant_index
+        self.used_index_values = set(used_index_values)
+        self.coefficient = coefficient
+
+    def __eq__(self, other):
+        return (isinstance(other, self.__class__) and
+                self.participant_index == other.participant_index and
+                self.used_index_values == other.used_index_values and
+                self.coefficient == other.coefficient)
+
+    def __str__(self):
+        return 'LagrangeCoefficient for participant with index {} in group {} : {}'.format(self.participant_index, list(self.used_index_values), self.coefficient)
 
 
 class PartialDecryption(ThresholdDataClass):

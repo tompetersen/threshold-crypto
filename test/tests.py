@@ -186,12 +186,14 @@ class PreTestCase(unittest.TestCase):
         assert new_pk != self.pk, "Public keys for new and old access structure are the same"
 
         t_old_shares = self.shares[:self.tp.t]
+        t_old_shares_x = [share.x for share in t_old_shares]
         t_new_shares = new_shares[:self.tp.t]
+        t_new_shares_x = [share.x for share in t_new_shares]
         partial_re_encrypt_keys = []
 
         for i, (s_old, s_new) in enumerate(zip(t_old_shares, t_new_shares)):
-            old_lambda = participant._compute_lagrange_coefficient_for_key_shares(t_old_shares, self.cp, i)
-            new_lambda = participant._compute_lagrange_coefficient_for_key_shares(t_new_shares, self.cp, i)
+            old_lambda = central.lagrange_coefficient_for_key_share_indices(t_old_shares_x, t_old_shares_x[i], self.cp)
+            new_lambda = central.lagrange_coefficient_for_key_share_indices(t_new_shares_x, t_new_shares_x[i], self.cp)
             partial_key = participant.compute_partial_re_encryption_key(s_old, old_lambda, s_new, new_lambda)
             partial_re_encrypt_keys.append(partial_key)
 

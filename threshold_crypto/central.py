@@ -6,7 +6,7 @@ import nacl.hash
 from Crypto.PublicKey import ECC
 
 from threshold_crypto.data import CurveParameters, ThresholdParameters, KeyShare, PartialDecryption, \
-    EncryptedMessage, ThresholdCryptoError, PartialReEncryptionKey, ReEncryptionKey, PublicKey
+    EncryptedMessage, ThresholdCryptoError, PartialReEncryptionKey, ReEncryptionKey, PublicKey, LagrangeCoefficient
 from threshold_crypto import number
 
 
@@ -64,9 +64,9 @@ def restore_priv_key(curve_params: CurveParameters, shares: [KeyShare], treshold
     x_shares = [share.x for share in used_shares]
     y_shares = [share.y for share in used_shares]
 
-    lagrange_coefficients = number.build_lagrange_coefficients(x_shares, curve_params.order)
+    lagrange_coefficients = [lagrange_coefficient_for_key_share_indices(x_shares, idx, curve_params) for idx in x_shares]
 
-    restored_secret = sum([(lagrange_coefficients[i] * y_shares[i]) for i in range(0, len(used_shares))]) % curve_params.order
+    restored_secret = sum([(lagrange_coefficients[i].coefficient * y_shares[i]) for i in range(0, len(used_shares))]) % curve_params.order
 
     return restored_secret
 
@@ -179,9 +179,9 @@ def _combine_shares(partial_decryptions: [PartialDecryption],
 
     # compute lagrange coefficients
     partial_indices = [dec.x for dec in partial_decryptions]
-    lagrange_coefficients = number.build_lagrange_coefficients(partial_indices, curve_params.order)
+    lagrange_coefficients = [lagrange_coefficient_for_key_share_indices(partial_indices, idx, curve_params) for idx in partial_indices]
 
-    summands = [lagrange_coefficients[i] * partial_decryptions[i].yC1 for i in range(0, len(partial_decryptions))]
+    summands = [lagrange_coefficients[i].coefficient * partial_decryptions[i].yC1 for i in range(0, len(partial_decryptions))]
     restored_kdP = number.ecc_sum(summands)
 
     restored_point = encrypted_message.C2 + (-restored_kdP)
@@ -190,6 +190,30 @@ def _combine_shares(partial_decryptions: [PartialDecryption],
 
 
 # re-encryption
+
+
+def lagrange_coefficient_for_key_share_indices(key_share_indices: [int], p_idx: int, curve_params: CurveParameters) -> LagrangeCoefficient:
+    """
+    Create the ith Lagrange coefficient for a list of key shares.
+
+    :param key_share_indices: the used indices for the participants key shares
+    :param curve_params: the used curve parameters
+    :param p_idx: the participant index (= the shares x value), the Lagrange coefficient belongs to
+    :return:
+    """
+    if p_idx not in key_share_indices:
+        raise ThresholdCryptoError("Participant index {} not found in used indices {} for computation of Lagrange coefficient".format(p_idx, key_share_indices))
+
+    idx_len = len(key_share_indices)
+    i = key_share_indices.index(p_idx)
+
+    def x(idx):
+        return key_share_indices[idx]
+
+    tmp = [(- x(j) * number.prime_mod_inv(x(i) - x(j), curve_params.order)) for j in range(0, idx_len) if not j == i]
+    coefficient = number.prod(tmp) % curve_params.order  # lambda_i
+
+    return LagrangeCoefficient(p_idx, key_share_indices, coefficient)
 
 
 def combine_partial_re_encryption_keys(partial_keys: [PartialReEncryptionKey], old_threshold_params: ThresholdParameters, new_threshold_params: ThresholdParameters) -> ReEncryptionKey:
