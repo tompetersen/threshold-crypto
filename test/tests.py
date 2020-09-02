@@ -6,9 +6,11 @@ from threshold_crypto.data import (ThresholdParameters,
                                    KeyShare,
                                    EncryptedMessage,
                                    PartialDecryption,
+                                   PartialReEncryptionKey,
+                                   ReEncryptionKey,
                                    PublicKey,
                                    )
-from threshold_crypto import number, PartialReEncryptionKey, ReEncryptionKey
+from threshold_crypto import number
 from threshold_crypto import central
 from threshold_crypto import participant
 

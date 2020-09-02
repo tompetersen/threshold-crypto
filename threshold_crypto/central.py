@@ -49,13 +49,13 @@ def create_public_key(participants_h_i: [ECC.EccPoint], curve_parameters: CurveP
     return PublicKey(h, curve_parameters)
 
 
-def restore_priv_key(curve_params: CurveParameters, shares: [KeyShare], treshold_params: ThresholdParameters):
+def _restore_priv_key(curve_params: CurveParameters, shares: [KeyShare], treshold_params: ThresholdParameters):
     """
     Combine multiple key shares to compute the (implicit) private key.
 
     ATTENTION: Just used for testing purposes - should never be used in a real scenario, if you don't have a special reason for this!
 
-    :param key_params:
+    :param curve_params:
     :param shares:
     :param treshold_params:
     :return:
@@ -140,7 +140,6 @@ def decrypt_message(partial_decryptions: [PartialDecryption],
     :param partial_decryptions: at least t partial decryptions
     :param encrypted_message: the encrapted message to be decrypted
     :param threshold_params: the used threshold parameters
-    :param curve_params: the used curve parameters
     :return: the decrypted message
     """
     curve_params = partial_decryptions[0].curve_params
@@ -169,10 +168,10 @@ def decrypt_message(partial_decryptions: [PartialDecryption],
 
 
 def _combine_shares(partial_decryptions: [PartialDecryption],
-                   encrypted_message: EncryptedMessage,
-                   threshold_params: ThresholdParameters,
-                   curve_params: CurveParameters
-                   ) -> ECC.EccPoint:
+                    encrypted_message: EncryptedMessage,
+                    threshold_params: ThresholdParameters,
+                    curve_params: CurveParameters
+                    ) -> ECC.EccPoint:
     # Disabled to enable testing for unsuccessful decryption
     # if len(partial_decryptions) < threshold_params.t:
     #    raise ThresholdCryptoError('less than t partial decryptions given')
@@ -218,7 +217,12 @@ def lagrange_coefficient_for_key_share_indices(key_share_indices: [int], p_idx: 
 
 def combine_partial_re_encryption_keys(partial_keys: [PartialReEncryptionKey], old_threshold_params: ThresholdParameters, new_threshold_params: ThresholdParameters) -> ReEncryptionKey:
     """
-    TBD
+    Combine a number of partial re-encryption keys yielding the re-encryption key.
+
+    :param partial_keys: The partial keys as provided by participants
+    :param old_threshold_params: the threshold parameters of the old access structure
+    :param new_threshold_params: the threshold parameters of the new access structure
+    :return:
     """
     # TODO check threshold parameters
     if old_threshold_params != new_threshold_params:
@@ -239,9 +243,10 @@ def combine_partial_re_encryption_keys(partial_keys: [PartialReEncryptionKey], o
 
 def re_encrypt_message(em: EncryptedMessage, re_key: ReEncryptionKey) -> EncryptedMessage:
     """
-    TBD
-    :param em:
-    :param re_key:
+    Re-encrypts a message using the provided re-encryption key.
+
+    :param em: the message
+    :param re_key: the re-encryption key
     :return:
     """
     re_enc_c = em.C2 + em.C1 * re_key.key
