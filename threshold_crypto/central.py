@@ -21,7 +21,7 @@ def create_public_key_and_shares_centralized(curve_params: CurveParameters, thre
     :param threshold_params: parameters t and n for the threshold scheme
     :return: (the public key, n key shares)
     """
-    d = number.getRandomRange(1, curve_params.order)
+    d = number.random_in_range(1, curve_params.order)
     Q = d * curve_params.P
     pk = PublicKey(Q, curve_params)
 
@@ -90,7 +90,7 @@ def encrypt_message(message: str, public_key: PublicKey) -> EncryptedMessage:
     # Create random subgroup element and use its hash as symmetric key to prevent
     # attacks described in "Why Textbook ElGamal and RSA Encryption Are Insecure"
     # by Boneh et. al.
-    r = number.getRandomRange(1, curve_params.order)
+    r = number.random_in_range(1, curve_params.order)
     key_point = r * curve_params.P
     point_bytes = _key_bytes_from_point(key_point)
 
@@ -118,7 +118,7 @@ def _key_bytes_from_point(p: ECC.EccPoint) -> bytes:
 
 
 def _encrypt_key_point(key_point: ECC.EccPoint, Q: ECC.EccPoint, curve_params: CurveParameters) -> (ECC.EccPoint, ECC.EccPoint):
-    k = number.getRandomRange(1, curve_params.order)
+    k = number.random_in_range(1, curve_params.order)
     C1 = k * curve_params.P
     kQ = k * Q
     C2 = key_point + kQ

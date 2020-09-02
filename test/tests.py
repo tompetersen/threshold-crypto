@@ -99,7 +99,7 @@ class TCTestCase(unittest.TestCase):
         self.assertTrue(p.evaluate(0) == 17)
 
     def test_key_encryption_decryption_with_enough_shares(self):
-        r = number.getRandomRange(2, self.cp.order)
+        r = number.random_in_range(2, self.cp.order)
         testkey_element = r * self.cp.P
         kP, c = central._encrypt_key_point(testkey_element, self.pk.Q, self.cp)
         em = EncryptedMessage(kP, c, b'')
@@ -110,7 +110,7 @@ class TCTestCase(unittest.TestCase):
         self.assertEqual(testkey_element, rec_testkey_element)
 
     def test_key_encryption_decryption_without_enough_shares(self):
-        r = number.getRandomRange(2, self.cp.order)
+        r = number.random_in_range(2, self.cp.order)
         testkey_element = r * self.cp.P
         kP, c = central._encrypt_key_point(testkey_element, self.pk.Q, self.cp)
         em = EncryptedMessage(kP, c, b'')

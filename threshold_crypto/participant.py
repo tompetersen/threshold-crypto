@@ -58,7 +58,7 @@ class Participant:
         :param key_params:
         :param threshold_params:
         """
-        self.x_i = number.getRandomRange(0, curve_params.order)  # Pedersen91 x_i from Z_q
+        self.x_i = number.random_in_range(0, curve_params.order)  # Pedersen91 x_i from Z_q
         self.h_i = self.x_i * curve_params.P
         self.node_id = node_id
         self.curve_params = curve_params
