@@ -45,28 +45,6 @@ def compute_partial_re_encryption_key(old_share: KeyShare, old_lc: LagrangeCoeff
     return PartialReEncryptionKey(partial_re_key, curve_params)
 
 
-def _compute_lagrange_coefficient_for_key_shares(key_shares: [KeyShare], curve_params: CurveParameters, i: int) -> int:
-    """
-    Create the ith Lagrange coefficient for a list of key shares.
-
-    TODO
-    Just temporary! This will live in a centralized spot later so that participants just receive the coefficient later.
-    It will obviously just take the x-values into account.
-
-    :param key_shares:
-    :param i:
-    :return:
-    """
-    x_values = [share.x for share in key_shares]
-    k_tmp = len(x_values)
-
-    def x(idx):
-        return x_values[idx]
-
-    tmp = [(- x(j) * number.prime_mod_inv(x(i) - x(j), curve_params.order)) for j in range(0, k_tmp) if not j == i]
-    return number.prod(tmp) % curve_params.order  # lambda_i
-
-
 class Participant:
     """
 

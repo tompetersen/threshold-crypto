@@ -93,19 +93,6 @@ class PolynomMod:
         return "Polynom of degree %d: f(x) = %s" % (self.degree, " + ".join(c_list))
 
 
-def build_lagrange_coefficients(partial_ind: [int], p: int) -> [int]:
-    k_tmp = len(partial_ind)
-    def x(idx):
-        return partial_ind[idx]
-
-    lagrange_coeff = []
-    for i in range(0, k_tmp):
-        tmp = [(- x(j) * prime_mod_inv(x(i) - x(j), p)) for j in range(0, k_tmp) if not j == i]
-        lagrange_coeff.append(prod(tmp) % p)  # lambda_i
-
-    return lagrange_coeff
-
-
 # The following functions are based on PyCrypto.
 
 def size (N):
