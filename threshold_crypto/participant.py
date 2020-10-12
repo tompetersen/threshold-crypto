@@ -1,8 +1,11 @@
+from typing import Dict, List, Optional
 
 from Crypto.PublicKey import ECC
+from Crypto.Random import random
+from Crypto.Hash import SHA3_256
 
 from threshold_crypto.data import EncryptedMessage, KeyShare, PartialDecryption, PartialReEncryptionKey, \
-    ThresholdCryptoError, CurveParameters, ThresholdParameters, LagrangeCoefficient
+    ThresholdCryptoError, CurveParameters, ThresholdParameters, LagrangeCoefficient, DkgClosedCommitment, DkgOpenCommitment, DkgSijValue, DkgFijValue
 from threshold_crypto import number
 
 
@@ -75,6 +78,59 @@ class Participant:
 
         self.s_i = 0
         self.key_share = None
+
+    @staticmethod
+    def _compute_commitment(commitment_random: bytes, h_i: ECC.EccPoint):
+        hash_fct = SHA3_256.new(commitment_random)
+        hash_fct.update(bytes(h_i.x))
+        hash_fct.update(bytes(h_i.y))
+        return hash_fct.digest()
+
+    def closed_commmitment(self) -> DkgClosedCommitment:
+        return DkgClosedCommitment(self.node_id, self._commitment)
+
+    def receive_closed_commitment(self, commitment: DkgClosedCommitment):
+        source_id = commitment.node_id
+
+        if source_id not in self.all_node_ids:
+            raise ThresholdCryptoError("Received closed commitment from unknown node id {}".format(source_id))
+
+        if source_id not in self._received_closed_commitments:
+            self._received_closed_commitments[source_id] = commitment
+        else:
+            raise ThresholdCryptoError("Closed commitment from node {} already received".format(source_id))
+
+    def open_commitment(self) -> DkgOpenCommitment:
+        if len(self._received_closed_commitments) != self.threshold_params.n - 1:
+            raise ThresholdCryptoError(
+                "Open commitment is just accessible when all other closed commitments were received")
+
+        return DkgOpenCommitment(self.node_id, self._commitment, self.h_i, self._commitment_random)
+
+    def receive_open_commitment(self, commitment: DkgOpenCommitment):
+        source_id = commitment.node_id
+
+        if source_id not in self.all_node_ids:
+            raise ThresholdCryptoError("Received open commitment from unknown node id {}".format(source_id))
+
+        if source_id not in self._received_open_commitments:
+            self._received_open_commitments[source_id] = commitment
+        else:
+            raise ThresholdCryptoError("Open commitment from node {} already received".format(source_id))
+
+    def _check_commitment_validity(self):
+        if len(self._received_closed_commitments) != self.threshold_params.n - 1:
+            raise ThresholdCryptoError("Not all commitments were received")
+
+        for node_id in self._received_closed_commitments:
+            closed_commitment = self._received_closed_commitments[node_id]
+            open_commitment = self._received_open_commitments[node_id]
+
+            if closed_commitment.commitment != open_commitment.commitment:
+                raise ThresholdCryptoError("Open and close commitment values differ for node {}".format(node_id))
+
+            if self._compute_commitment(open_commitment.r, open_commitment.h_i) != closed_commitment.commitment:
+                raise ThresholdCryptoError("Invalid commitment for node {}".format(node_id))
 
     def receive_F(self, node_id: int, node_F_ij: [ECC.EccPoint]):
         if len(node_F_ij) != self.threshold_params.t:
