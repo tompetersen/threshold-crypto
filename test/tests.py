@@ -1,5 +1,7 @@
 import unittest
 
+from Crypto.Random import random
+
 from threshold_crypto.data import (ThresholdParameters,
                                    CurveParameters,
                                    ThresholdCryptoError,
@@ -9,6 +11,10 @@ from threshold_crypto.data import (ThresholdParameters,
                                    PartialReEncryptionKey,
                                    ReEncryptionKey,
                                    PublicKey,
+                                   DkgOpenCommitment,
+                                   DkgSijValue,
+                                   DkgClosedCommitment,
+                                   DkgFijValue
                                    )
 from threshold_crypto import number
 from threshold_crypto import central
@@ -224,6 +230,30 @@ class DkgTestCase(unittest.TestCase):
 
     def tearDown(self):
         pass
+
+    def test_closed_commitment_json(self):
+        c = DkgClosedCommitment(1, random.getrandbits(10))
+        c_j = DkgClosedCommitment.from_json(c.to_json())
+
+        self.assertEqual(c, c_j)
+
+    def test_open_commitment_json(self):
+        c = DkgOpenCommitment(1, random.getrandbits(10), self.cp.P, random.getrandbits(10))
+        c_j = DkgOpenCommitment.from_json(c.to_json())
+
+        self.assertEqual(c, c_j)
+
+    def test_F_ij_value_json(self):
+        f = DkgFijValue(1, 2, [self.cp.P, 2 * self.cp.P])
+        f_j = DkgOpenCommitment.from_json(f.to_json())
+
+        self.assertEqual(f, f_j)
+
+    def test_s_ij_value_json(self):
+        f = DkgSijValue(1, 2, 42)
+        f_j = DkgSijValue.from_json(f.to_json())
+
+        self.assertEqual(f, f_j)
 
     def test_distributed_key_generation(self):
         participants = [participant.Participant(id, self.cp, self.tp) for id in range(1, self.tp.n + 1)]

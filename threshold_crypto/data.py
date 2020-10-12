@@ -1,7 +1,7 @@
 import base64
 import collections
 import json
-from typing import Iterable
+from typing import Iterable, List
 
 from Crypto.PublicKey import ECC
 
@@ -39,6 +39,8 @@ class ThresholdDataClass:
                     "y": int(p.y),
                     "curve": p._curve_name,
                 }
+
+            # TODO list of curve points
 
         return json.dumps(data_dict)
 
@@ -279,6 +281,9 @@ class PartialDecryption(ThresholdDataClass):
         return 'PartialDecryption (x, yC1) = ({}, {}) (on curve {})'.format(self.x, self.yC1, self.curve_params._name)
 
 
+# re-encryption data types
+
+
 class PartialReEncryptionKey(ThresholdDataClass):
     """
     A partial re-encryption key, which can be combined with others to yield the final re-encryption key.
@@ -332,3 +337,112 @@ class ReEncryptionKey(ThresholdDataClass):
 
     def __str__(self):
         return 'ReEncryptionKey dB - dA = {} (for curve {})'.format(self.key, self.curve_params._name)
+
+
+# DKG data types
+
+class DkgClosedCommitment(ThresholdDataClass):
+    """
+    TODO
+    """
+
+    def __init__(self, node_id: int, commitment: bytes):
+        """
+        TODO
+
+        :param node_id:
+        :param commitment:
+        """
+        self.node_id = node_id
+        self.commitment = commitment
+
+    def __eq__(self, other):
+        return (isinstance(other, self.__class__) and
+                self.node_id == other.node_id and
+                self.commitment == other.commitment)
+
+    def __str__(self):
+        return 'DkgClosedCommitment for node {} = {}'.format(self.node_id, self.commitment)
+
+
+class DkgOpenCommitment(ThresholdDataClass):
+    """
+    TODO
+    """
+
+    def __init__(self, node_id: int, commitment: bytes, h_i: ECC.EccPoint, r: bytes):
+        """
+        TODO
+
+        :param node_id:
+        :param commitment:
+        """
+        self.node_id = node_id
+        self.commitment = commitment
+        self.h_i = h_i
+        self.r = r
+
+    def __eq__(self, other):
+        return (isinstance(other, self.__class__) and
+                self.node_id == other.node_id and
+                self.commitment == other.commitment and
+                self.h_i == other.h_i and
+                self.r == other.r)
+
+    def __str__(self):
+        return 'DkgOpenCommitment for node {} = (c={}, h_i={}, r={})'.format(self.node_id, self.commitment, self.h_i, self.r)
+
+
+class DkgSijValue(ThresholdDataClass):
+    """
+    TODO
+    """
+
+    def __init__(self, source_node_id: int, target_node_id: int, s_ij: int):
+        """
+        TODO
+
+        :param source_node_id:
+        :param target_node_id:
+        :param s_ij:
+        """
+        self.source_node_id = source_node_id
+        self.target_node_id = target_node_id
+        self.s_ij = s_ij
+
+    def __eq__(self, other):
+        return (isinstance(other, self.__class__) and
+                self.source_node_id == other.source_node_id and
+                self.target_node_id == other.target_node_id and
+                self.s_ij == other.s_ij)
+
+    def __str__(self):
+        return 'DkgSijValue from node {} to node {} = {}'.format(self.source_node_id, self.target_node_id, self.s_ij)
+
+
+class DkgFijValue(ThresholdDataClass):
+    """
+    TODO
+    """
+
+    def __init__(self, source_node_id: int, target_node_id: int, F_ij: List[ECC.EccPoint]):
+        """
+        TODO
+
+        :param source_node_id:
+        :param target_node_id:
+        :param F_ij:
+        """
+        self.source_node_id = source_node_id
+        self.target_node_id = target_node_id
+        self.F_ij = F_ij
+
+    def __eq__(self, other):
+        return (isinstance(other, self.__class__) and
+                self.source_node_id == other.source_node_id and
+                self.target_node_id == other.target_node_id and
+                self.F_ij == other.F_ij)
+
+    def __str__(self):
+        return 'DkgFijValue from node {} to node {} = {}'.format(self.source_node_id, self.target_node_id, self.F_ij)
+
