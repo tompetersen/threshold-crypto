@@ -195,19 +195,30 @@ class Participant:
         else:
             return DkgSijValue(self.node_id, target_node_id, self._local_sij[target_node_id])
 
-    def receive_sij(self, node_id: int, received_sij: int):
-        if node_id not in self._received_sij:
-            self._received_sij[node_id] = received_sij
+    def receive_sij(self, received_sij: DkgSijValue):
+        source_id = received_sij.source_node_id
+        target_id = received_sij.target_node_id
+        sij = received_sij.s_ij
+
+        if source_id not in self.all_node_ids:
+            raise ThresholdCryptoError("Received s_ij value from unknown node id {}".format(source_id))
+
+        if target_id != self.node_id:
+            raise ThresholdCryptoError(
+                "Received s_ij value for foreign node (own id={}, target id={})".format(self.node_id, target_id))
+
+        if source_id not in self._received_sij:
+            self._received_sij[source_id] = received_sij
         else:
-            raise ThresholdCryptoError("s_ij value for node {} already received".format(node_id))
+            raise ThresholdCryptoError("s_ij value for node {} already received".format(source_id))
 
         # verify received F values
-        s_ijP = received_sij * self.curve_params.P
-        F_list = [(self.node_id ** l) * F_jl for l, F_jl in enumerate(self._received_F[node_id])]
+        s_ijP = sij * self.curve_params.P
+        F_list = [(self.node_id ** l) * F_jl for l, F_jl in enumerate(self._received_F[source_id])]
         F_sum = number.ecc_sum(F_list)
 
         if s_ijP != F_sum:
-            raise ThresholdCryptoError("F verification failed for node {}".format(node_id))
+            raise ThresholdCryptoError("F verification failed for node {}".format(source_id))
 
     def compute_share(self) -> KeyShare:
         """
