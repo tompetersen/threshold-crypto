@@ -76,9 +76,6 @@ class Participant:
         self.s_i = 0
         self.key_share = None
 
-    def __str__(self):
-        return "Participant[node_id = {}, a_i = {}, h_i = {}, s_i = {}".format(self.node_id, self.x_i, self.h_i, self.s_i)
-
     def receive_F(self, node_id: int, node_F_ij: [ECC.EccPoint]):
         if len(node_F_ij) != self.threshold_params.t:
             raise ThresholdCryptoError("list of F_ij for node {} has length {} != {} = t".format(node_id, len(node_F_ij), self.threshold_params.t))
@@ -110,10 +107,19 @@ class Participant:
         if s_ijP != F_sum:
             raise ThresholdCryptoError("F verification failed for node {}".format(node_id))
 
-    def compute_share(self):
+    def compute_share(self) -> KeyShare:
+        """
+        Compute the participants key share from values obtained during the DKG protocol.
+
+        :return: the final key share after the DKG protocol
+        """
         if len(self._received_sij) != self.threshold_params.n:
-            raise ThresholdCryptoError("received less sij values than necessary: {} != {} = n".format(len(self._received_sij), self.threshold_params.t))
+            raise ThresholdCryptoError("Received less s_ij values than necessary: {} != {} = n".format(len(self._received_sij), self.threshold_params.n))
 
         self.s_i = sum(self._received_sij.values()) % self.curve_params.order
         self.key_share = KeyShare(self.node_id, self.s_i, self.curve_params)
 
+        return self.key_share
+
+    def __str__(self):
+        return "Participant[node_id = {}, a_i = {}, h_i = {}, s_i = {}".format(self.node_id, self.x_i, self.h_i, self.s_i)
