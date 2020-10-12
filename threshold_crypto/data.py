@@ -1,13 +1,39 @@
 import base64
 import collections
 import json
-from typing import Iterable, List
+from typing import Iterable, List, Any, Dict
 
 from Crypto.PublicKey import ECC
 
 
 class ThresholdCryptoError(Exception):
     pass
+
+
+# helper functions for serializing ECC.EccPoint
+
+def _ecc_point_to_serializable(p: ECC.EccPoint) -> Dict[str, Any]:
+    return {
+        "x": int(p.x),
+        "y": int(p.y),
+        "curve": p._curve_name,
+    }
+
+
+def _is_ecc_point_list(value):
+    if isinstance(value, list):
+        return all(isinstance(item, ECC.EccPoint) for item in value)
+    return False
+
+
+def _is_serialized_ecc_point(value):
+    return isinstance(value, collections.Mapping) and "x" in value and "y" in value and "curve" in value
+
+
+def _is_serialized_ecc_point_list(value):
+    if isinstance(value, list):
+        return all(_is_serialized_ecc_point(item) for item in value)
+    return False
 
 
 class ThresholdDataClass:
@@ -22,25 +48,21 @@ class ThresholdDataClass:
         """ Create json representation of object. Some special cases are already handled here. """
         data_dict = self.__dict__.copy()
 
-        for k in data_dict:
+        for k, val in data_dict.items():
             # special handling of bytes
-            if isinstance(data_dict[k], bytes):
-                data_dict[k] = self.BASE64_MAGIC + base64.b64encode(data_dict[k]).decode('ascii')
+            if isinstance(val, bytes):
+                data_dict[k] = self.BASE64_MAGIC + base64.b64encode(val).decode('ascii')
 
             # special handling of curve parameters
-            if isinstance(data_dict[k], CurveParameters):
-                data_dict[k] = self.CURVE_MAGIC + data_dict[k]._name
+            if isinstance(val, CurveParameters):
+                data_dict[k] = self.CURVE_MAGIC + val._name
 
             # special handling of curve points
-            if isinstance(data_dict[k], ECC.EccPoint):
-                p = data_dict[k]
-                data_dict[k] = {
-                    "x": int(p.x),
-                    "y": int(p.y),
-                    "curve": p._curve_name,
-                }
+            if isinstance(val, ECC.EccPoint):
+                data_dict[k] = _ecc_point_to_serializable(val)
 
-            # TODO list of curve points
+            if _is_ecc_point_list(val):
+                data_dict[k] = [_ecc_point_to_serializable(p) for p in val]
 
         return json.dumps(data_dict)
 
@@ -49,18 +71,21 @@ class ThresholdDataClass:
         """ Create object from json representation. Some special cases are already handled here. """
         dict = json.loads(json_str)
 
-        for k in dict:
+        for k, val in dict.items():
             # special handling of bytes
-            if isinstance(dict[k], str) and dict[k].startswith(cls.BASE64_MAGIC):
-                dict[k] = base64.b64decode(dict[k][len(cls.BASE64_MAGIC):].encode('ascii'))
+            if isinstance(val, str) and val.startswith(cls.BASE64_MAGIC):
+                dict[k] = base64.b64decode(val[len(cls.BASE64_MAGIC):].encode('ascii'))
 
             # special handling of curve parameters
-            if isinstance(dict[k], str) and dict[k].startswith(cls.CURVE_MAGIC):
-                dict[k] = CurveParameters(curve_name=dict[k][len(cls.CURVE_MAGIC):])
+            if isinstance(val, str) and val.startswith(cls.CURVE_MAGIC):
+                dict[k] = CurveParameters(curve_name=val[len(cls.CURVE_MAGIC):])
 
             # special handling of curve points
-            if isinstance(dict[k], collections.Mapping) and "x" in dict[k] and "y" in dict[k] and "curve" in dict[k]:
-                dict[k] = ECC.EccPoint(**dict[k])
+            if _is_serialized_ecc_point(val):
+                dict[k] = ECC.EccPoint(**val)
+
+            if _is_serialized_ecc_point_list(dict[k]):
+                dict[k] = [ECC.EccPoint(**s_point) for s_point in val]
 
         return cls(**dict)
 
