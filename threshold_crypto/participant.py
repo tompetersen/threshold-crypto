@@ -58,8 +58,7 @@ class Participant:
 
     _COMMITMENT_RANDOM_BITS = 256
 
-    def __init__(self, own_node_id: NodeId, all_node_ids: List[NodeId], curve_params: CurveParameters,
-                 threshold_params: ThresholdParameters):
+    def __init__(self, own_node_id: NodeId, all_node_ids: List[NodeId], curve_params: CurveParameters, threshold_params: ThresholdParameters):
         """
         TODO
 
@@ -80,9 +79,7 @@ class Participant:
 
         self.x_i: int = number.random_in_range(0, curve_params.order)  # Pedersen91 x_i from Z_q
         self.h_i: ECC.EccPoint = self.x_i * curve_params.P
-        self._polynom: number.PolynomMod = number.PolynomMod.create_random_polynom(self.x_i,
-                                                                                   self.threshold_params.t - 1,
-                                                                                   curve_params.order)
+        self._polynom: number.PolynomMod = number.PolynomMod.create_random_polynom(self.x_i, self.threshold_params.t - 1, curve_params.order)
 
         # calculate own F_ij values
         self._local_F_ij: List[ECC.EccPoint] = []
@@ -177,12 +174,10 @@ class Participant:
             raise ThresholdCryptoError("Received F_ij values from unknown node id {}".format(source_id))
 
         if target_id != self.node_id:
-            raise ThresholdCryptoError(
-                "Received F_ij values for foreign node (own id={}, target id={})".format(self.node_id, target_id))
+            raise ThresholdCryptoError("Received F_ij values for foreign node (own id={}, target id={})".format(self.node_id, target_id))
 
         if len_F_ij != self.threshold_params.t:
-            raise ThresholdCryptoError(
-                "List of F_ij values from node {} has length {} != {} = t".format(source_id, len_F_ij, self.threshold_params.t))
+            raise ThresholdCryptoError("List of F_ij values from node {} has length {} != {} = t".format(source_id, len_F_ij, self.threshold_params.t))
 
         if source_id not in self._received_F:
             self._received_F[source_id] = node_F_ij
@@ -204,8 +199,7 @@ class Participant:
             raise ThresholdCryptoError("Received s_ij value from unknown node id {}".format(source_id))
 
         if target_id != self.node_id:
-            raise ThresholdCryptoError(
-                "Received s_ij value for foreign node (own id={}, target id={})".format(self.node_id, target_id))
+            raise ThresholdCryptoError("Received s_ij value for foreign node (own id={}, target id={})".format(self.node_id, target_id))
 
         if source_id not in self._received_sij:
             self._received_sij[source_id] = received_sij
