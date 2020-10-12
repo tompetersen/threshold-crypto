@@ -160,6 +160,12 @@ class Participant:
             if self._compute_commitment(open_commitment.r, open_commitment.h_i) != closed_commitment.commitment:
                 raise ThresholdCryptoError("Invalid commitment for node {}".format(node_id))
 
+    def F_ij_values_for_node(self, target_node_id: NodeId) -> DkgFijValue:
+        if target_node_id not in self.all_node_ids:
+            raise ThresholdCryptoError("Node id {} not present in known node ids".format(target_node_id))
+        else:
+            return DkgFijValue(self.node_id, target_node_id, self._local_F_ij)
+
     def receive_F(self, node_id: int, node_F_ij: [ECC.EccPoint]):
         if len(node_F_ij) != self.threshold_params.t:
             raise ThresholdCryptoError("list of F_ij for node {} has length {} != {} = t".format(node_id, len(node_F_ij), self.threshold_params.t))
@@ -168,6 +174,12 @@ class Participant:
             self._received_F[node_id] = node_F_ij
         else:
             raise ThresholdCryptoError("F value for node {} already received".format(node_id))
+
+    def s_ij_value_for_node(self, target_node_id: NodeId) -> DkgSijValue:
+        if target_node_id not in self.all_node_ids:
+            raise ThresholdCryptoError("Node id {} not present in known node ids".format(target_node_id))
+        else:
+            return DkgSijValue(self.node_id, target_node_id, self._local_sij[target_node_id])
 
     def receive_sij(self, node_id: int, received_sij: int):
         if node_id not in self._received_sij:
