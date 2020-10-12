@@ -245,7 +245,7 @@ class DkgTestCase(unittest.TestCase):
 
     def test_F_ij_value_json(self):
         f = DkgFijValue(1, 2, [self.cp.P, 2 * self.cp.P])
-        f_j = DkgOpenCommitment.from_json(f.to_json())
+        f_j = DkgFijValue.from_json(f.to_json())
 
         self.assertEqual(f, f_j)
 
