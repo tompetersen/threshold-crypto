@@ -166,14 +166,28 @@ class Participant:
         else:
             return DkgFijValue(self.node_id, target_node_id, self._local_F_ij)
 
-    def receive_F(self, node_id: int, node_F_ij: [ECC.EccPoint]):
-        if len(node_F_ij) != self.threshold_params.t:
-            raise ThresholdCryptoError("list of F_ij for node {} has length {} != {} = t".format(node_id, len(node_F_ij), self.threshold_params.t))
+    def receive_F_ij_value(self, node_F_ij: DkgFijValue):
+        # TODO check that all commitments match
 
-        if node_id not in self._received_F:
-            self._received_F[node_id] = node_F_ij
+        source_id = node_F_ij.source_node_id
+        target_id = node_F_ij.target_node_id
+        len_F_ij = len(node_F_ij.F_ij)
+
+        if source_id not in self.all_node_ids:
+            raise ThresholdCryptoError("Received F_ij values from unknown node id {}".format(source_id))
+
+        if target_id != self.node_id:
+            raise ThresholdCryptoError(
+                "Received F_ij values for foreign node (own id={}, target id={})".format(self.node_id, target_id))
+
+        if len_F_ij != self.threshold_params.t:
+            raise ThresholdCryptoError(
+                "List of F_ij values from node {} has length {} != {} = t".format(source_id, len_F_ij, self.threshold_params.t))
+
+        if source_id not in self._received_F:
+            self._received_F[source_id] = node_F_ij
         else:
-            raise ThresholdCryptoError("F value for node {} already received".format(node_id))
+            raise ThresholdCryptoError("F_ij values from node {} already received".format(source_id))
 
     def s_ij_value_for_node(self, target_node_id: NodeId) -> DkgSijValue:
         if target_node_id not in self.all_node_ids:
