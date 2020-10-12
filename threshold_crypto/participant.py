@@ -9,6 +9,9 @@ from threshold_crypto.data import EncryptedMessage, KeyShare, PartialDecryption,
 from threshold_crypto import number
 
 
+NodeId = int
+
+
 def compute_partial_decryption(encrypted_message: EncryptedMessage, key_share: KeyShare) -> PartialDecryption:
     """
     Compute the partial decryption of an encrypted message using a key share.
@@ -53,31 +56,56 @@ class Participant:
 
     """
 
-    def __init__(self, node_id: int, curve_params: CurveParameters, threshold_params: ThresholdParameters):
+    _COMMITMENT_RANDOM_BITS = 256
+
+    def __init__(self, own_node_id: NodeId, all_node_ids: List[NodeId], curve_params: CurveParameters,
+                 threshold_params: ThresholdParameters):
         """
+        TODO
 
-
-        :param node_id:
+        :param own_node_id:
         :param key_params:
         :param threshold_params:
         """
-        self.x_i = number.random_in_range(0, curve_params.order)  # Pedersen91 x_i from Z_q
-        self.h_i = self.x_i * curve_params.P
-        self.node_id = node_id
-        self.curve_params = curve_params
-        self.threshold_params = threshold_params
+        if len(all_node_ids) != self.threshold_params.n:
+            raise ThresholdCryptoError("List of all node ids has length {} != {} = n".format(len(all_node_ids), self.threshold_params.n))
 
-        self._polynom = number.PolynomMod.create_random_polynom(self.x_i, self.threshold_params.t - 1, curve_params.order)
-        self._local_F_ij = []
+        if own_node_id not in all_node_ids:
+            raise ThresholdCryptoError("Own node id must be contained in all node ids")
+
+        self.all_node_ids: List[NodeId] = all_node_ids
+        self.node_id: NodeId = own_node_id
+        self.curve_params: CurveParameters = curve_params
+        self.threshold_params: ThresholdParameters = threshold_params
+
+        self.x_i: int = number.random_in_range(0, curve_params.order)  # Pedersen91 x_i from Z_q
+        self.h_i: ECC.EccPoint = self.x_i * curve_params.P
+        self._polynom: number.PolynomMod = number.PolynomMod.create_random_polynom(self.x_i,
+                                                                                   self.threshold_params.t - 1,
+                                                                                   curve_params.order)
+
+        # calculate own F_ij values
+        self._local_F_ij: List[ECC.EccPoint] = []
         for coeff in self._polynom.coefficients:
             self._local_F_ij.append(coeff * curve_params.P)
 
-        self._local_sij = {}
-        self._received_F = {}  # received F_ij values from all participants
-        self._received_sij = {}  # received s_ij values from all participants
+        # calculate own s_ij values
+        self._local_sij: Dict[NodeId, int] = {}
+        for node_id in self.all_node_ids:
+            s_ij = self._polynom.evaluate(node_id)
+            self._local_sij[node_id] = s_ij
 
-        self.s_i = 0
-        self.key_share = None
+        # random value for commitment for value h_i
+        self._commitment_random: bytes = random.getrandbits(self._COMMITMENT_RANDOM_BITS)
+        self._commitment: bytes = self._compute_commitment(self._commitment_random, self.h_i)
+
+        self._received_closed_commitments: Dict[NodeId, DkgClosedCommitment] = {}
+        self._received_open_commitments: Dict[NodeId, DkgOpenCommitment] = {}
+        self._received_F: Dict[NodeId, DkgFijValue] = {}  # received F_ij values from all participants
+        self._received_sij: Dict[NodeId, DkgSijValue] = {}  # received s_ij values from all participants
+
+        self.s_i: int = 0
+        self.key_share: Optional[KeyShare] = None
 
     @staticmethod
     def _compute_commitment(commitment_random: bytes, h_i: ECC.EccPoint):
@@ -140,14 +168,6 @@ class Participant:
             self._received_F[node_id] = node_F_ij
         else:
             raise ThresholdCryptoError("F value for node {} already received".format(node_id))
-
-    def calculate_sij(self, node_id_list: [int]):
-        if len(node_id_list) != self.threshold_params.n:
-            raise ThresholdCryptoError("list of node ids has length {} != {} = n".format(len(node_id_list), self.threshold_params.n))
-
-        for node_id in node_id_list:
-            s_ij = self._polynom.evaluate(node_id)
-            self._local_sij[node_id] = s_ij
 
     def receive_sij(self, node_id: int, received_sij: int):
         if node_id not in self._received_sij:
