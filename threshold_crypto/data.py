@@ -20,27 +20,27 @@ class ThresholdDataClass:
 
     def to_json(self):
         """ Create json representation of object. Some special cases are already handled here. """
-        dict = self.__dict__.copy()
+        data_dict = self.__dict__.copy()
 
-        for k in dict:
+        for k in data_dict:
             # special handling of bytes
-            if isinstance(dict[k], bytes):
-                dict[k] = self.BASE64_MAGIC + base64.b64encode(dict[k]).decode('ascii')
+            if isinstance(data_dict[k], bytes):
+                data_dict[k] = self.BASE64_MAGIC + base64.b64encode(data_dict[k]).decode('ascii')
 
             # special handling of curve parameters
-            if isinstance(dict[k], CurveParameters):
-                dict[k] = self.CURVE_MAGIC + dict[k]._name
+            if isinstance(data_dict[k], CurveParameters):
+                data_dict[k] = self.CURVE_MAGIC + data_dict[k]._name
 
             # special handling of curve points
-            if isinstance(dict[k], ECC.EccPoint):
-                p = dict[k]
-                dict[k] = {
+            if isinstance(data_dict[k], ECC.EccPoint):
+                p = data_dict[k]
+                data_dict[k] = {
                     "x": int(p.x),
                     "y": int(p.y),
                     "curve": p._curve_name,
                 }
 
-        return json.dumps(dict)
+        return json.dumps(data_dict)
 
     @classmethod
     def from_json(cls, json_str: str):
