@@ -175,7 +175,7 @@ class Participant:
             if self._compute_commitment(open_commitment.r, open_commitment.h_i) != closed_commitment.commitment:
                 raise ThresholdCryptoError("Invalid commitment for participant {}".format(p_id))
 
-    def computed_public_key(self) -> PublicKey:
+    def compute_public_key(self) -> PublicKey:
         self._check_all_commitment_validities()
 
         participants_h_i = [c.h_i for c in self._received_open_commitments.values()]

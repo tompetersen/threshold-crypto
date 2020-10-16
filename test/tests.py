@@ -271,8 +271,8 @@ class DkgTestCase(unittest.TestCase):
                     open_commitment = pj.open_commitment()
                     pi.receive_open_commitment(open_commitment)
 
-        public_key = participants[0].computed_public_key()
-        for pk in [p.computed_public_key() for p in participants[1:]]:
+        public_key = participants[0].compute_public_key()
+        for pk in [p.compute_public_key() for p in participants[1:]]:
             self.assertEqual(public_key, pk)
 
         # steps for Pedersen DKG protocol
