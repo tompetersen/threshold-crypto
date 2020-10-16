@@ -105,7 +105,7 @@ class Participant:
             self.node_id: self._unchecked_open_commitment()
         }
         self._received_F: Dict[NodeId, DkgFijValue] = {  # received F_ij values from all participants
-            self.node_id: self.F_ij_values_for_node(self.node_id)
+            self.node_id: self.F_ij_value()
         }
         self._received_sij: Dict[NodeId, DkgSijValue] = {  # received s_ij values from all participants
             self.node_id: self.s_ij_value_for_node(self.node_id)
@@ -184,17 +184,13 @@ class Participant:
 
         return PublicKey(h, self.curve_params)
 
-    def F_ij_values_for_node(self, target_node_id: NodeId) -> DkgFijValue:
-        if target_node_id not in self.all_node_ids:
-            raise ThresholdCryptoError("Node id {} not present in known node ids".format(target_node_id))
-        else:
-            return DkgFijValue(self.node_id, target_node_id, self._local_F_ij)
+    def F_ij_value(self) -> DkgFijValue:
+        return DkgFijValue(self.node_id, self._local_F_ij)
 
     def receive_F_ij_value(self, node_F_ij: DkgFijValue):
         # TODO check that all commitments match
 
         source_id = node_F_ij.source_node_id
-        target_id = node_F_ij.target_node_id
         len_F_ij = len(node_F_ij.F_ij)
 
         if source_id not in self.all_node_ids:
@@ -202,9 +198,6 @@ class Participant:
 
         if source_id == self.node_id:
             raise ThresholdCryptoError("Received own F_ij values - don't do this")
-
-        if target_id != self.node_id:
-            raise ThresholdCryptoError("Received F_ij values for foreign node (own id={}, target id={})".format(self.node_id, target_id))
 
         if len_F_ij != self.threshold_params.t:
             raise ThresholdCryptoError("List of F_ij values from node {} has length {} != {} = t".format(source_id, len_F_ij, self.threshold_params.t))

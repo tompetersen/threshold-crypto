@@ -244,7 +244,7 @@ class DkgTestCase(unittest.TestCase):
         self.assertEqual(c, c_j)
 
     def test_F_ij_value_json(self):
-        f = DkgFijValue(1, 2, [self.cp.P, 2 * self.cp.P])
+        f = DkgFijValue(1, [self.cp.P, 2 * self.cp.P])
         f_j = DkgFijValue.from_json(f.to_json())
 
         self.assertEqual(f, f_j)
@@ -279,7 +279,7 @@ class DkgTestCase(unittest.TestCase):
         for pi in participants:
             for pj in participants:
                 if pj != pi:
-                    F_ij = pj.F_ij_values_for_node(pi.node_id)
+                    F_ij = pj.F_ij_value()
                     pi.receive_F_ij_value(F_ij)
 
         for pi in participants:

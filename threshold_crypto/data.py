@@ -450,7 +450,7 @@ class DkgFijValue(ThresholdDataClass):
     TODO
     """
 
-    def __init__(self, source_node_id: int, target_node_id: int, F_ij: List[ECC.EccPoint]):
+    def __init__(self, source_node_id: int, F_ij: List[ECC.EccPoint]):
         """
         TODO
 
@@ -459,15 +459,13 @@ class DkgFijValue(ThresholdDataClass):
         :param F_ij:
         """
         self.source_node_id = source_node_id
-        self.target_node_id = target_node_id
         self.F_ij = F_ij
 
     def __eq__(self, other):
         return (isinstance(other, self.__class__) and
                 self.source_node_id == other.source_node_id and
-                self.target_node_id == other.target_node_id and
                 self.F_ij == other.F_ij)
 
     def __str__(self):
-        return 'DkgFijValue from node {} to node {} = {}'.format(self.source_node_id, self.target_node_id, self.F_ij)
+        return 'DkgFijValue from node {} = {}'.format(self.source_node_id, self.F_ij)
 
