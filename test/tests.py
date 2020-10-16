@@ -256,32 +256,44 @@ class DkgTestCase(unittest.TestCase):
         self.assertEqual(f, f_j)
 
     def test_distributed_key_generation(self):
-        participants = [participant.Participant(id, self.cp, self.tp) for id in range(1, self.tp.n + 1)]
+        participant_ids = list(range(1, self.tp.n + 1))
+        participants = [participant.Participant(id, participant_ids, self.cp, self.tp) for id in participant_ids]
+
+        for pi in participants:
+            for pj in participants:
+                if pj != pi:
+                    closed_commitment = pj.closed_commmitment()
+                    pi.receive_closed_commitment(closed_commitment)
+
+        for pi in participants:
+            for pj in participants:
+                if pj != pi:
+                    open_commitment = pj.open_commitment()
+                    pi.receive_open_commitment(open_commitment)
+
+        public_key = participants[0].computed_public_key()
+        for pk in [p.computed_public_key() for p in participants[1:]]:
+            self.assertEqual(public_key, pk)
 
         # steps for Pedersen DKG protocol
         for pi in participants:
             for pj in participants:
-                pi.receive_F(pj.node_id, pj._local_F_ij)
-
-        node_ids = [p.node_id for p in participants]
-        for p in participants:
-            p.calculate_sij(node_ids)
+                if pj != pi:
+                    F_ij = pj.F_ij_values_for_node(pi.node_id)
+                    pi.receive_F_ij_value(F_ij)
 
         for pi in participants:
             for pj in participants:
-                pi.receive_sij(pj.node_id, pj._local_sij[pi.node_id])
+                if pj != pi:
+                    s_ij = pj.s_ij_value_for_node(pi.node_id)
+                    pi.receive_sij(s_ij)
 
-        for p in participants:
-            p.compute_share()
-
-        p_his = [p.h_i for p in participants]
-        public_key = central.create_public_key(p_his, self.cp, self.tp)
+        shares = [p.compute_share() for p in participants]
 
         # test encryption/decryption
 
         em = central.encrypt_message(self.message, public_key)
 
-        shares = [p.key_share for p in participants]
         pdms = [participant.compute_partial_decryption(em, ks) for ks in shares[:self.tp.t]]
         dm = central.decrypt_message(pdms, em, self.tp)
 
