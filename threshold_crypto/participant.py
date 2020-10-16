@@ -241,7 +241,7 @@ class Participant:
 
         # verify received F values
         s_ijP = sij * self.curve_params.P
-        F_list = [(self.node_id ** l) * F_jl for l, F_jl in enumerate(self._received_F[source_id])]
+        F_list = [(self.node_id ** l) * F_jl for l, F_jl in enumerate(self._received_F[source_id].F_ij)]
         F_sum = number.ecc_sum(F_list)
 
         if s_ijP != F_sum:
@@ -256,7 +256,7 @@ class Participant:
         if len(self._received_sij) != self.threshold_params.n:
             raise ThresholdCryptoError("Received less s_ij values than necessary: {} != {} = n".format(len(self._received_sij), self.threshold_params.n))
 
-        self.s_i = sum(self._received_sij.values()) % self.curve_params.order
+        self.s_i = sum(rs.s_ij for rs in self._received_sij.values()) % self.curve_params.order
         self.key_share = KeyShare(self.node_id, self.s_i, self.curve_params)
 
         return self.key_share
