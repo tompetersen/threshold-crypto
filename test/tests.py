@@ -285,7 +285,7 @@ class DkgTestCase(unittest.TestCase):
         for pi in participants:
             for pj in participants:
                 if pj != pi:
-                    s_ij = pj.s_ij_value_for_node(pi.node_id)
+                    s_ij = pj.s_ij_value_for_participant(pi.id)
                     pi.receive_sij(s_ij)
 
         shares = [p.compute_share() for p in participants]
