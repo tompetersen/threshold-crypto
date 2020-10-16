@@ -94,7 +94,8 @@ class Participant:
             self._local_sij[node_id] = s_ij
 
         # random value for commitment for value h_i
-        self._commitment_random: bytes = random.getrandbits(self._COMMITMENT_RANDOM_BITS)
+        rand_int = random.getrandbits(self._COMMITMENT_RANDOM_BITS)
+        self._commitment_random: bytes = number.int_to_bytes(rand_int)
         self._commitment: bytes = self._compute_commitment(self._commitment_random, self.h_i)
 
         self._received_closed_commitments: Dict[NodeId, DkgClosedCommitment] = {
