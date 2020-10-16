@@ -9,6 +9,7 @@ from threshold_crypto.data import EncryptedMessage, KeyShare, PartialDecryption,
     DkgOpenCommitment, DkgSijValue, DkgFijValue, PublicKey
 from threshold_crypto import number
 
+
 ParticipantId = int
 
 
@@ -29,11 +30,11 @@ def compute_partial_re_encryption_key(old_share: KeyShare, old_lc: LagrangeCoeff
     """
     Compute a partial re-encryption key from a participants old and new share.
 
-    :param old_share:
-    :param old_lc:
-    :param new_share:
-    :param new_lc:
-    :return:
+    :param old_share: the participants "old" key share
+    :param old_lc: "old" lagrange coefficient provided by the coordinating party
+    :param new_share: the participants "new" key share
+    :param new_lc: "new" lagrange coefficient provided by the coordinating party
+    :return: the partial re-encryption key
     """
     curve_params = old_share.curve_params
 
@@ -53,18 +54,24 @@ def compute_partial_re_encryption_key(old_share: KeyShare, old_lc: LagrangeCoeff
 
 class Participant:
     """
-
+    A Participant provides the interface for a participant in the distributed key generation (DKG) protocol of Pedersen91.
+    Required values for other participants can be obtained and functionality to receive these values is offered.
+    A multitude of checks are performed to prevent illegal state or actions during the protocol. However, several communication
+    aspects as e.g., the secure transport of s_ij values to other participants, are not included and have to be assured
+    by users of this class.
     """
 
     _COMMITMENT_RANDOM_BITS = 256
 
     def __init__(self, own_id: ParticipantId, all_participant_ids: List[ParticipantId], curve_params: CurveParameters, threshold_params: ThresholdParameters):
         """
-        TODO
+        Initialize a participant.
 
-        :param key_params:
         :param own_id: the id of this participant.
-        :param threshold_params:
+        As this id is used as the final shares x value, it's important that participants use distinct ids.
+        :param all_participant_ids: a list of all
+        :param curve_params: the curve parameters used
+        :param threshold_params: the required threshold parameters
         """
         if len(set(all_participant_ids)) != threshold_params.n:
             raise ThresholdCryptoError("List of distinct participant ids has length {} != {} = n".format(len(all_participant_ids), threshold_params.n))
@@ -92,7 +99,7 @@ class Participant:
             s_ij = self._polynom.evaluate(p_id)
             self._local_sij[p_id] = s_ij
 
-        # random value for commitment for value h_i
+        # random value for commitment of h_i
         rand_int = random.getrandbits(self._COMMITMENT_RANDOM_BITS)
         self._commitment_random: bytes = number.int_to_bytes(rand_int)
         self._commitment: bytes = self._compute_commitment(self._commitment_random, self._h_i)
@@ -110,7 +117,7 @@ class Participant:
             self.id: self._unchecked_s_ij_value_for_participant(self.id)
         }
 
-        self._s_i: int = 0
+        self._s_i: Optional[int] = None
         self.key_share: Optional[KeyShare] = None
 
     @staticmethod
@@ -121,9 +128,19 @@ class Participant:
         return hash_fct.digest()
 
     def closed_commmitment(self) -> DkgClosedCommitment:
+        """
+        The participants closed commitment to the "public key share" h_i.
+
+        :return: the closed commitment
+        """
         return DkgClosedCommitment(self.id, self._commitment)
 
     def receive_closed_commitment(self, commitment: DkgClosedCommitment):
+        """
+        Receive a closed commitment to the "public key share" h_i of another participant.
+
+        :param commitment: the received commitment
+        """
         source_id = commitment.participant_id
 
         if source_id not in self.all_participant_ids:
@@ -138,6 +155,11 @@ class Participant:
             raise ThresholdCryptoError("Closed commitment from participant {} already received".format(source_id))
 
     def open_commitment(self) -> DkgOpenCommitment:
+        """
+        The participants open commitment to the "public key share" h_i, which can be evaluated.
+
+        :return: the open commitment
+        """
         if len(self._received_closed_commitments) != self.threshold_params.n:
             raise ThresholdCryptoError(
                 "Open commitment is just accessible when all other closed commitments were received")
@@ -145,9 +167,16 @@ class Participant:
         return self._unchecked_open_commitment()
 
     def _unchecked_open_commitment(self) -> DkgOpenCommitment:
+        # This method is provided so that it can be used for the own commitment computation in the __init__
+        # method without performing the check in open_commitment.
         return DkgOpenCommitment(self.id, self._commitment, self._h_i, self._commitment_random)
 
     def receive_open_commitment(self, commitment: DkgOpenCommitment):
+        """
+        Receive an open (evaluatable) commitment to the "public key share" h_i of another participant.
+
+        :param commitment: the received commitment
+        """
         source_id = commitment.participant_id
 
         if source_id not in self.all_participant_ids:
@@ -176,6 +205,11 @@ class Participant:
                 raise ThresholdCryptoError("Invalid commitment for participant {}".format(p_id))
 
     def compute_public_key(self) -> PublicKey:
+        """
+        Compute the public key from received commitment values.
+
+        :return: the public key
+        """
         self._check_all_commitment_validities()
 
         participants_h_i = [c.h_i for c in self._received_open_commitments.values()]
@@ -184,9 +218,20 @@ class Participant:
         return PublicKey(h, self.curve_params)
 
     def F_ij_value(self) -> DkgFijValue:
+        """
+        The F_ij value from Pedersens DKG protocol, which is used to evaluate the correctness of the s_ij
+        values received in a later step.
+
+        :return: The F_ij value
+        """
         return DkgFijValue(self.id, self._local_F_ij)
 
     def receive_F_ij_value(self, F_ij: DkgFijValue):
+        """
+        Receive the F_ij value of another participant.
+
+        :param F_ij: the received F_ij value
+        """
         # TODO check that all commitments match once before receiving the first F_ij value (boolean flag/global state enum/...?)
 
         source_id = F_ij.source_participant_id
@@ -207,6 +252,12 @@ class Participant:
             raise ThresholdCryptoError("F_ij values from participant {} already received".format(source_id))
 
     def s_ij_value_for_participant(self, target_participant_id: ParticipantId) -> DkgSijValue:
+        """
+        The s_ij value from Pedersens DKG protocol for ONE other particular participant.
+        This value has to be sent SECRETLY to the target participant, which is not covered by this library for now.
+
+        :param target_participant_id: the id of the target participant
+        """
         if len(self._received_F) != self.threshold_params.n:
             raise ThresholdCryptoError(
                 "s_ij values are just accessible when all other F_ij values were received")
@@ -214,12 +265,19 @@ class Participant:
         return self._unchecked_s_ij_value_for_participant(target_participant_id)
 
     def _unchecked_s_ij_value_for_participant(self, target_participant_id: ParticipantId) -> DkgSijValue:
+        # This method is provided so that it can be used for the own s_ij value computation in the __init__
+        # method without performing the check in s_ij_value_for_participant.
         if target_participant_id not in self.all_participant_ids:
             raise ThresholdCryptoError("Participant id {} not present in known participant ids".format(target_participant_id))
         else:
             return DkgSijValue(self.id, target_participant_id, self._local_sij[target_participant_id])
 
     def receive_sij(self, received_sij: DkgSijValue):
+        """
+        Receive the s_ij value of another participant.
+
+        :param received_sij: the received s_ij value
+        """
         source_id = received_sij.source_participant_id
         target_id = received_sij.target_participant_id
         sij = received_sij.s_ij
