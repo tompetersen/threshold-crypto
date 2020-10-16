@@ -107,7 +107,7 @@ class Participant:
             self.id: self.F_ij_value()
         }
         self._received_sij: Dict[ParticipantId, DkgSijValue] = {
-            self.id: self.s_ij_value_for_participant(self.id)
+            self.id: self._unchecked_s_ij_value_for_participant(self.id)
         }
 
         self._s_i: int = 0
@@ -207,6 +207,13 @@ class Participant:
             raise ThresholdCryptoError("F_ij values from participant {} already received".format(source_id))
 
     def s_ij_value_for_participant(self, target_participant_id: ParticipantId) -> DkgSijValue:
+        if len(self._received_F) != self.threshold_params.n:
+            raise ThresholdCryptoError(
+                "s_ij values are just accessible when all other F_ij values were received")
+
+        return self._unchecked_s_ij_value_for_participant(target_participant_id)
+
+    def _unchecked_s_ij_value_for_participant(self, target_participant_id: ParticipantId) -> DkgSijValue:
         if target_participant_id not in self.all_participant_ids:
             raise ThresholdCryptoError("Participant id {} not present in known participant ids".format(target_participant_id))
         else:
