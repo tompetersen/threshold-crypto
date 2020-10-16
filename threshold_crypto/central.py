@@ -33,22 +33,6 @@ def create_public_key_and_shares_centralized(curve_params: CurveParameters, thre
     return pk,shares
 
 
-def create_public_key(participants_h_i: [ECC.EccPoint], curve_parameters: CurveParameters, threshold_params: ThresholdParameters) -> PublicKey:
-    """
-    Pedersen91-related
-
-    :param participants:
-    :param key_params:
-    :return:
-    """
-    if len(participants_h_i) != threshold_params.n:
-        raise ThresholdCryptoError('number of participants h_i values {} != {} = n'.format(len(participants_h_i), threshold_params.n))
-
-    h = number.ecc_sum(participants_h_i)
-
-    return PublicKey(h, curve_parameters)
-
-
 def _restore_priv_key(curve_params: CurveParameters, shares: [KeyShare], treshold_params: ThresholdParameters):
     """
     Combine multiple key shares to compute the (implicit) private key.
