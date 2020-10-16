@@ -67,8 +67,8 @@ class Participant:
         :param key_params:
         :param threshold_params:
         """
-        if len(all_node_ids) != self.threshold_params.n:
-            raise ThresholdCryptoError("List of all node ids has length {} != {} = n".format(len(all_node_ids), self.threshold_params.n))
+        if len(all_node_ids) != threshold_params.n:
+            raise ThresholdCryptoError("List of all node ids has length {} != {} = n".format(len(all_node_ids), threshold_params.n))
 
         if own_node_id not in all_node_ids:
             raise ThresholdCryptoError("Own node id must be contained in all node ids")
