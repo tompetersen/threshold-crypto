@@ -11,9 +11,9 @@ def ecc_sum(points: List[ECC.EccPoint]):
     if len(points) == 0:
         return None
     elif len(points) == 1:
-        return points[0]
+        return points[0].copy()
     else:
-        result = points[0]
+        result = points[0].copy()
         for point in points[1:]:
             result += point
 
