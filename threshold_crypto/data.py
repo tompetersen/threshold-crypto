@@ -371,23 +371,23 @@ class DkgClosedCommitment(ThresholdDataClass):
     TODO
     """
 
-    def __init__(self, node_id: int, commitment: bytes):
+    def __init__(self, participant_id: int, commitment: bytes):
         """
         TODO
 
-        :param node_id:
+        :param participant_id:
         :param commitment:
         """
-        self.node_id = node_id
+        self.participant_id = participant_id
         self.commitment = commitment
 
     def __eq__(self, other):
         return (isinstance(other, self.__class__) and
-                self.node_id == other.node_id and
+                self.participant_id == other.participant_id and
                 self.commitment == other.commitment)
 
     def __str__(self):
-        return 'DkgClosedCommitment for node {} = {}'.format(self.node_id, self.commitment)
+        return 'DkgClosedCommitment for participant {} = {}'.format(self.participant_id, self.commitment)
 
 
 class DkgOpenCommitment(ThresholdDataClass):
@@ -395,27 +395,27 @@ class DkgOpenCommitment(ThresholdDataClass):
     TODO
     """
 
-    def __init__(self, node_id: int, commitment: bytes, h_i: ECC.EccPoint, r: bytes):
+    def __init__(self, participant_id: int, commitment: bytes, h_i: ECC.EccPoint, r: bytes):
         """
         TODO
 
-        :param node_id:
+        :param participant_id:
         :param commitment:
         """
-        self.node_id = node_id
+        self.participant_id = participant_id
         self.commitment = commitment
         self.h_i = h_i
         self.r = r
 
     def __eq__(self, other):
         return (isinstance(other, self.__class__) and
-                self.node_id == other.node_id and
+                self.participant_id == other.participant_id and
                 self.commitment == other.commitment and
                 self.h_i == other.h_i and
                 self.r == other.r)
 
     def __str__(self):
-        return 'DkgOpenCommitment for node {} = (c={}, h_i={}, r={})'.format(self.node_id, self.commitment, self.h_i, self.r)
+        return 'DkgOpenCommitment for participant {} = (c={}, h_i={}, r={})'.format(self.participant_id, self.commitment, self.h_i, self.r)
 
 
 class DkgSijValue(ThresholdDataClass):
@@ -423,26 +423,26 @@ class DkgSijValue(ThresholdDataClass):
     TODO
     """
 
-    def __init__(self, source_node_id: int, target_node_id: int, s_ij: int):
+    def __init__(self, source_participant_id: int, target_participant_id: int, s_ij: int):
         """
         TODO
 
-        :param source_node_id:
-        :param target_node_id:
+        :param source_participant_id:
+        :param target_participant_id:
         :param s_ij:
         """
-        self.source_node_id = source_node_id
-        self.target_node_id = target_node_id
+        self.source_participant_id = source_participant_id
+        self.target_participant_id = target_participant_id
         self.s_ij = s_ij
 
     def __eq__(self, other):
         return (isinstance(other, self.__class__) and
-                self.source_node_id == other.source_node_id and
-                self.target_node_id == other.target_node_id and
+                self.source_participant_id == other.source_participant_id and
+                self.target_participant_id == other.target_participant_id and
                 self.s_ij == other.s_ij)
 
     def __str__(self):
-        return 'DkgSijValue from node {} to node {} = {}'.format(self.source_node_id, self.target_node_id, self.s_ij)
+        return 'DkgSijValue from participant {} to participant {} = {}'.format(self.source_participant_id, self.target_participant_id, self.s_ij)
 
 
 class DkgFijValue(ThresholdDataClass):
@@ -450,22 +450,21 @@ class DkgFijValue(ThresholdDataClass):
     TODO
     """
 
-    def __init__(self, source_node_id: int, F_ij: List[ECC.EccPoint]):
+    def __init__(self, source_participant_id: int, F_ij: List[ECC.EccPoint]):
         """
         TODO
 
-        :param source_node_id:
-        :param target_node_id:
+        :param source_participant_id:
         :param F_ij:
         """
-        self.source_node_id = source_node_id
+        self.source_participant_id = source_participant_id
         self.F_ij = F_ij
 
     def __eq__(self, other):
         return (isinstance(other, self.__class__) and
-                self.source_node_id == other.source_node_id and
+                self.source_participant_id == other.source_participant_id and
                 self.F_ij == other.F_ij)
 
     def __str__(self):
-        return 'DkgFijValue from node {} = {}'.format(self.source_node_id, self.F_ij)
+        return 'DkgFijValue from participant {} = {}'.format(self.source_participant_id, self.F_ij)
 
