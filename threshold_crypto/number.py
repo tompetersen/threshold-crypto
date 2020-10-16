@@ -6,6 +6,11 @@ from Crypto.PublicKey import ECC
 from Crypto.Random import random
 
 
+def int_to_bytes(value: int) -> bytes:
+    """ Return the bytes for a given integer. """
+    return value.to_bytes((value.bit_length() + 7) // 8, byteorder='big')
+
+
 def ecc_sum(points: List[ECC.EccPoint]):
     """ Compute the sum of a list of EccPoints. """
     if len(points) == 0:

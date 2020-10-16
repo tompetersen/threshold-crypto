@@ -107,8 +107,8 @@ class Participant:
     @staticmethod
     def _compute_commitment(commitment_random: bytes, h_i: ECC.EccPoint):
         hash_fct = SHA3_256.new(commitment_random)
-        hash_fct.update(bytes(h_i.x))
-        hash_fct.update(bytes(h_i.y))
+        hash_fct.update(number.int_to_bytes(int(h_i.x)))
+        hash_fct.update(number.int_to_bytes(int(h_i.y)))
         return hash_fct.digest()
 
     def closed_commmitment(self) -> DkgClosedCommitment:
