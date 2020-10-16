@@ -96,10 +96,18 @@ class Participant:
         self._commitment_random: bytes = random.getrandbits(self._COMMITMENT_RANDOM_BITS)
         self._commitment: bytes = self._compute_commitment(self._commitment_random, self.h_i)
 
-        self._received_closed_commitments: Dict[NodeId, DkgClosedCommitment] = {}
-        self._received_open_commitments: Dict[NodeId, DkgOpenCommitment] = {}
-        self._received_F: Dict[NodeId, DkgFijValue] = {}  # received F_ij values from all participants
-        self._received_sij: Dict[NodeId, DkgSijValue] = {}  # received s_ij values from all participants
+        self._received_closed_commitments: Dict[NodeId, DkgClosedCommitment] = {
+            self.node_id: self.closed_commmitment()
+        }
+        self._received_open_commitments: Dict[NodeId, DkgOpenCommitment] = {
+            self.node_id: self._unchecked_open_commitment()
+        }
+        self._received_F: Dict[NodeId, DkgFijValue] = {  # received F_ij values from all participants
+            self.node_id: self.F_ij_values_for_node(self.node_id)
+        }
+        self._received_sij: Dict[NodeId, DkgSijValue] = {  # received s_ij values from all participants
+            self.node_id: self.s_ij_value_for_node(self.node_id)
+        }
 
         self.s_i: int = 0
         self.key_share: Optional[KeyShare] = None
@@ -120,16 +128,22 @@ class Participant:
         if source_id not in self.all_node_ids:
             raise ThresholdCryptoError("Received closed commitment from unknown node id {}".format(source_id))
 
+        if source_id == self.node_id:
+            raise ThresholdCryptoError("Received own closed commitment - don't do this")
+
         if source_id not in self._received_closed_commitments:
             self._received_closed_commitments[source_id] = commitment
         else:
             raise ThresholdCryptoError("Closed commitment from node {} already received".format(source_id))
 
     def open_commitment(self) -> DkgOpenCommitment:
-        if len(self._received_closed_commitments) != self.threshold_params.n - 1:
+        if len(self._received_closed_commitments) != self.threshold_params.n:
             raise ThresholdCryptoError(
                 "Open commitment is just accessible when all other closed commitments were received")
 
+        return self._unchecked_open_commitment()
+
+    def _unchecked_open_commitment(self) -> DkgOpenCommitment:
         return DkgOpenCommitment(self.node_id, self._commitment, self.h_i, self._commitment_random)
 
     def receive_open_commitment(self, commitment: DkgOpenCommitment):
@@ -138,13 +152,16 @@ class Participant:
         if source_id not in self.all_node_ids:
             raise ThresholdCryptoError("Received open commitment from unknown node id {}".format(source_id))
 
+        if source_id == self.node_id:
+            raise ThresholdCryptoError("Received own open commitment - don't do this")
+
         if source_id not in self._received_open_commitments:
             self._received_open_commitments[source_id] = commitment
         else:
             raise ThresholdCryptoError("Open commitment from node {} already received".format(source_id))
 
-    def _check_commitment_validity(self):
-        if len(self._received_closed_commitments) != self.threshold_params.n - 1:
+    def _check_all_commitment_validities(self):
+        if len(self._received_closed_commitments) != self.threshold_params.n:
             raise ThresholdCryptoError("Not all commitments were received")
 
         for node_id in self._received_closed_commitments:
@@ -173,6 +190,9 @@ class Participant:
         if source_id not in self.all_node_ids:
             raise ThresholdCryptoError("Received F_ij values from unknown node id {}".format(source_id))
 
+        if source_id == self.node_id:
+            raise ThresholdCryptoError("Received own F_ij values - don't do this")
+
         if target_id != self.node_id:
             raise ThresholdCryptoError("Received F_ij values for foreign node (own id={}, target id={})".format(self.node_id, target_id))
 
@@ -197,6 +217,9 @@ class Participant:
 
         if source_id not in self.all_node_ids:
             raise ThresholdCryptoError("Received s_ij value from unknown node id {}".format(source_id))
+
+        if source_id == self.node_id:
+            raise ThresholdCryptoError("Received own s_ij value - don't do this")
 
         if target_id != self.node_id:
             raise ThresholdCryptoError("Received s_ij value for foreign node (own id={}, target id={})".format(self.node_id, target_id))
