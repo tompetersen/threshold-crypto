@@ -5,7 +5,8 @@ from Crypto.Random import random
 from Crypto.Hash import SHA3_256
 
 from threshold_crypto.data import EncryptedMessage, KeyShare, PartialDecryption, PartialReEncryptionKey, \
-    ThresholdCryptoError, CurveParameters, ThresholdParameters, LagrangeCoefficient, DkgClosedCommitment, DkgOpenCommitment, DkgSijValue, DkgFijValue
+    ThresholdCryptoError, CurveParameters, ThresholdParameters, LagrangeCoefficient, DkgClosedCommitment, \
+    DkgOpenCommitment, DkgSijValue, DkgFijValue, PublicKey
 from threshold_crypto import number
 
 
@@ -173,6 +174,14 @@ class Participant:
 
             if self._compute_commitment(open_commitment.r, open_commitment.h_i) != closed_commitment.commitment:
                 raise ThresholdCryptoError("Invalid commitment for node {}".format(node_id))
+
+    def computed_public_key(self) -> PublicKey:
+        self._check_all_commitment_validities()
+
+        participants_h_i = [c.h_i for c in self._received_open_commitments.values()]
+        h = number.ecc_sum(participants_h_i)
+
+        return PublicKey(h, self.curve_params)
 
     def F_ij_values_for_node(self, target_node_id: NodeId) -> DkgFijValue:
         if target_node_id not in self.all_node_ids:
