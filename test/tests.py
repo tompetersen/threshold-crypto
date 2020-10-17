@@ -111,7 +111,7 @@ class TCTestCase(unittest.TestCase):
         em = EncryptedMessage(kP, c, b'')
         reconstruct_shares = [self.shares[i] for i in [0, 2, 4]]  # choose 3 of 5 key shares
         partial_decryptions = [participant.compute_partial_decryption(em, share) for share in reconstruct_shares]
-        rec_testkey_element = central._combine_shares(partial_decryptions, em, self.tp, self.cp)
+        rec_testkey_element = central._combine_shares(partial_decryptions, em, self.cp)
 
         self.assertEqual(testkey_element, rec_testkey_element)
 
@@ -122,7 +122,7 @@ class TCTestCase(unittest.TestCase):
         em = EncryptedMessage(kP, c, b'')
         reconstruct_shares = [self.shares[i] for i in [0, 4]]  # choose 2 of 5 key shares
         partial_decryptions = [participant.compute_partial_decryption(em, share) for share in reconstruct_shares]
-        rec_testkey_element = central._combine_shares(partial_decryptions, em, self.tp, self.cp)
+        rec_testkey_element = central._combine_shares(partial_decryptions, em, self.cp)
 
         self.assertNotEqual(testkey_element, rec_testkey_element)
 
@@ -188,35 +188,62 @@ class PreTestCase(unittest.TestCase):
         self.assertEqual(rek, rek_j)
 
     def test_re_encryption_process_for_same_access_structures(self):
-        """ """
-        new_pk, new_shares = central.create_public_key_and_shares_centralized(self.cp, self.tp)
+        self.parameterizable_re_encryption_process_test(self.tp.t, self.tp.n)
+
+    def test_re_encryption_process_for_added_participant(self):
+        self.parameterizable_re_encryption_process_test(self.tp.t, self.tp.n + 1)
+
+    def test_re_encryption_process_for_removed_participant(self):
+        self.parameterizable_re_encryption_process_test(self.tp.t, self.tp.n - 1)
+
+    def test_re_encryption_process_for_smaller_threshold(self):
+        self.parameterizable_re_encryption_process_test(self.tp.t - 1, self.tp.n)
+
+    def test_re_encryption_process_for_larger_threshold(self):
+        self.parameterizable_re_encryption_process_test(self.tp.t + 1, self.tp.n)
+
+    def parameterizable_re_encryption_process_test(self, new_t: int, new_n: int):
+        new_tp = ThresholdParameters(new_t, new_n)
+        new_pk, new_shares = central.create_public_key_and_shares_centralized(self.cp, new_tp)
 
         assert new_pk != self.pk, "Public keys for new and old access structure are the same"
 
-        t_old_shares = self.shares[:self.tp.t]
+        # Without loss of generality we assume the lists to be ordered in a way, that remaining participants
+        # are placed at the beginning of the list.
+        # Choose t_max shares randomly from first min_n old and new shares as the shares of one distinct participant.
+        max_t = max(self.tp.t, new_tp.t)
+        min_n = min(self.tp.n, new_tp.n)
+        t_old_shares = random.sample(self.shares[:min_n], k=max_t)
         t_old_shares_x = [share.x for share in t_old_shares]
-        t_new_shares = new_shares[:self.tp.t]
+        t_new_shares = random.sample(new_shares[:min_n], k=max_t)
         t_new_shares_x = [share.x for share in t_new_shares]
-        partial_re_encrypt_keys = []
 
+        partial_re_encrypt_keys = []
         for i, (s_old, s_new) in enumerate(zip(t_old_shares, t_new_shares)):
             old_lambda = central.lagrange_coefficient_for_key_share_indices(t_old_shares_x, t_old_shares_x[i], self.cp)
             new_lambda = central.lagrange_coefficient_for_key_share_indices(t_new_shares_x, t_new_shares_x[i], self.cp)
             partial_key = participant.compute_partial_re_encryption_key(s_old, old_lambda, s_new, new_lambda)
             partial_re_encrypt_keys.append(partial_key)
 
-        re_encrypt_key = central.combine_partial_re_encryption_keys(partial_re_encrypt_keys, self.tp, self.tp)
+        re_encrypt_key = central.combine_partial_re_encryption_keys(partial_re_encrypt_keys, self.tp, new_tp)
         re_em = central.re_encrypt_message(self.em, re_encrypt_key)
 
         self.assertNotEqual(self.em, re_em)
 
-        new_reconstruct_shares = [new_shares[i] for i in [0, 2, 4]]
+        # successful decryption with t shares
+        new_reconstruct_shares = random.sample(new_shares, new_tp.t)
         new_partial_decryptions = [participant.compute_partial_decryption(re_em, share) for share in new_reconstruct_shares]
 
-        decrypted_message = central.decrypt_message(new_partial_decryptions, re_em, self.tp)
-
+        decrypted_message = central.decrypt_message(new_partial_decryptions, re_em, new_tp)
         self.assertEqual(self.message, decrypted_message)
 
+        # failing decryption with t - 1 shares
+        with self.assertRaises(ThresholdCryptoError) as dec_exception_context:
+            less_reconstruct_shares = random.sample(new_shares, new_tp.t - 1)
+            new_partial_decryptions = [participant.compute_partial_decryption(re_em, share) for share in less_reconstruct_shares]
+            central._decrypt_message(new_partial_decryptions, re_em)
+
+        self.assertIn("Message decryption failed", str(dec_exception_context.exception))
 
 class DkgTestCase(unittest.TestCase):
     """

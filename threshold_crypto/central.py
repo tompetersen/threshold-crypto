@@ -126,6 +126,16 @@ def decrypt_message(partial_decryptions: [PartialDecryption],
     :param threshold_params: the used threshold parameters
     :return: the decrypted message
     """
+    if len(partial_decryptions) < threshold_params.t:
+        raise ThresholdCryptoError('less than t partial decryptions given')
+
+    return _decrypt_message(partial_decryptions, encrypted_message)
+
+
+def _decrypt_message(partial_decryptions: [PartialDecryption],
+                     encrypted_message: EncryptedMessage,
+                     ) -> str:
+    # this method does not contain the check for given number of partial decryptions to allow testing the failing decryption
     curve_params = partial_decryptions[0].curve_params
     for partial_key in partial_decryptions:
         if partial_key.curve_params != curve_params:
@@ -134,8 +144,7 @@ def decrypt_message(partial_decryptions: [PartialDecryption],
     key_point = _combine_shares(
         partial_decryptions,
         encrypted_message,
-        threshold_params,
-        curve_params
+        curve_params,
     )
     point_bytes = _key_bytes_from_point(key_point)
 
@@ -151,15 +160,10 @@ def decrypt_message(partial_decryptions: [PartialDecryption],
     return str(encoded_plaintext, 'utf-8')
 
 
-def _combine_shares(partial_decryptions: [PartialDecryption],
+def _combine_shares(partial_decryptions: List[PartialDecryption],
                     encrypted_message: EncryptedMessage,
-                    threshold_params: ThresholdParameters,
-                    curve_params: CurveParameters
+                    curve_params: CurveParameters,
                     ) -> ECC.EccPoint:
-    # Disabled to enable testing for unsuccessful decryption
-    # if len(partial_decryptions) < threshold_params.t:
-    #    raise ThresholdCryptoError('less than t partial decryptions given')
-
     # compute lagrange coefficients
     partial_indices = [dec.x for dec in partial_decryptions]
     lagrange_coefficients = [lagrange_coefficient_for_key_share_indices(partial_indices, idx, curve_params) for idx in partial_indices]
@@ -209,10 +213,10 @@ def combine_partial_re_encryption_keys(partial_keys: [PartialReEncryptionKey], o
     :return:
     """
     # TODO check threshold parameters
-    if old_threshold_params != new_threshold_params:
-        raise ThresholdCryptoError("Threshold parameters differ! For now this is not allowed...")
 
-    if len(partial_keys) < new_threshold_params.t or len(partial_keys) < 1:
+    max_t = max(old_threshold_params.t, new_threshold_params.t)
+
+    if len(partial_keys) < max_t:
         raise ThresholdCryptoError("Not enough partial re-encryption keys given")
 
     curve_params = partial_keys[0].curve_params
