@@ -344,7 +344,7 @@ class ReEncryptionKey(ThresholdDataClass):
 
     def __init__(self, key: int, curve_params: CurveParameters):
         """
-        Construct the re-encryption key
+        Construct the re-encryption key.
 
         :param key: the reencryption key (dB - dA) meaning new private key minus old private key obtained by combing partial re-encryption keys
         :param curve_params: The used curve parameters
@@ -368,15 +368,15 @@ class ReEncryptionKey(ThresholdDataClass):
 
 class DkgClosedCommitment(ThresholdDataClass):
     """
-    TODO
+    The closed commitment sent in the first step of Pedersens DKG protocol.
     """
 
     def __init__(self, participant_id: int, commitment: bytes):
         """
-        TODO
+        Initialize the closed commitment.
 
-        :param participant_id:
-        :param commitment:
+        :param participant_id: the participant id
+        :param commitment: the (closed) commitment value
         """
         self.participant_id = participant_id
         self.commitment = commitment
@@ -392,15 +392,17 @@ class DkgClosedCommitment(ThresholdDataClass):
 
 class DkgOpenCommitment(ThresholdDataClass):
     """
-    TODO
+    The open commitment of Pedersens DKG protocol sent after each participant has received all closed commitments.
     """
 
     def __init__(self, participant_id: int, commitment: bytes, h_i: ECC.EccPoint, r: bytes):
         """
-        TODO
+        Initialize the open commitment.
 
-        :param participant_id:
-        :param commitment:
+        :param participant_id: the participant id
+        :param commitment: the (closed) commitment value
+        :param h_i: the "public key share" (ecc point) the participant has commited to
+        :param r: the random value used in commitment computation
         """
         self.participant_id = participant_id
         self.commitment = commitment
@@ -418,18 +420,42 @@ class DkgOpenCommitment(ThresholdDataClass):
         return 'DkgOpenCommitment for participant {} = (c={}, h_i={}, r={})'.format(self.participant_id, self.commitment, self.h_i, self.r)
 
 
+class DkgFijValue(ThresholdDataClass):
+    """
+    The F_ij values used in Pedersens DKG protocol used as check for the later sent s_ij values.
+    """
+
+    def __init__(self, source_participant_id: int, F_ij: List[ECC.EccPoint]):
+        """
+        Initialize the F_ij value.
+
+        :param source_participant_id: the participant id
+        :param F_ij: the F_ij values (ecc points in this implementation)
+        """
+        self.source_participant_id = source_participant_id
+        self.F_ij = F_ij
+
+    def __eq__(self, other):
+        return (isinstance(other, self.__class__) and
+                self.source_participant_id == other.source_participant_id and
+                self.F_ij == other.F_ij)
+
+    def __str__(self):
+        return 'DkgFijValue from participant {} = {}'.format(self.source_participant_id, self.F_ij)
+
+
 class DkgSijValue(ThresholdDataClass):
     """
-    TODO
+    The share of their secret value a participant sents to another participant SECRETLY.
     """
 
     def __init__(self, source_participant_id: int, target_participant_id: int, s_ij: int):
         """
-        TODO
+        Initialize the s_ij value.
 
-        :param source_participant_id:
-        :param target_participant_id:
-        :param s_ij:
+        :param source_participant_id: the source participant of this value
+        :param target_participant_id: the target participant of this value
+        :param s_ij: the s_ij value
         """
         self.source_participant_id = source_participant_id
         self.target_participant_id = target_participant_id
@@ -443,28 +469,3 @@ class DkgSijValue(ThresholdDataClass):
 
     def __str__(self):
         return 'DkgSijValue from participant {} to participant {} = {}'.format(self.source_participant_id, self.target_participant_id, self.s_ij)
-
-
-class DkgFijValue(ThresholdDataClass):
-    """
-    TODO
-    """
-
-    def __init__(self, source_participant_id: int, F_ij: List[ECC.EccPoint]):
-        """
-        TODO
-
-        :param source_participant_id:
-        :param F_ij:
-        """
-        self.source_participant_id = source_participant_id
-        self.F_ij = F_ij
-
-    def __eq__(self, other):
-        return (isinstance(other, self.__class__) and
-                self.source_participant_id == other.source_participant_id and
-                self.F_ij == other.F_ij)
-
-    def __str__(self):
-        return 'DkgFijValue from participant {} = {}'.format(self.source_participant_id, self.F_ij)
-
