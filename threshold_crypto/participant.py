@@ -171,13 +171,13 @@ class Participant:
         # method without performing the check in open_commitment.
         return DkgOpenCommitment(self.id, self._commitment, self._h_i, self._commitment_random)
 
-    def receive_open_commitment(self, commitment: DkgOpenCommitment):
+    def receive_open_commitment(self, open_commitment: DkgOpenCommitment):
         """
         Receive an open (evaluatable) commitment to the "public key share" h_i of another participant.
 
-        :param commitment: the received commitment
+        :param open_commitment: the received commitment
         """
-        source_id = commitment.participant_id
+        source_id = open_commitment.participant_id
 
         if source_id not in self.all_participant_ids:
             raise ThresholdCryptoError("Received open commitment from unknown participant id {}".format(source_id))
@@ -185,24 +185,21 @@ class Participant:
         if source_id == self.id:
             raise ThresholdCryptoError("Received own open commitment - don't do this")
 
+        if source_id not in self._received_closed_commitments:
+            raise ThresholdCryptoError("Received open commitment from participant id {} withput received closed commitment".format(source_id))
+
+        closed_commitment = self._received_closed_commitments[source_id]
+
+        if closed_commitment.commitment != open_commitment.commitment:
+            raise ThresholdCryptoError("Open and close commitment values differ for participant {}".format(source_id))
+
+        if self._compute_commitment(open_commitment.r, open_commitment.h_i) != closed_commitment.commitment:
+            raise ThresholdCryptoError("Invalid commitment for participant {}".format(source_id))
+
         if source_id not in self._received_open_commitments:
-            self._received_open_commitments[source_id] = commitment
+            self._received_open_commitments[source_id] = open_commitment
         else:
             raise ThresholdCryptoError("Open commitment from participant {} already received".format(source_id))
-
-    def _check_all_commitment_validities(self):
-        if len(self._received_closed_commitments) != self.threshold_params.n:
-            raise ThresholdCryptoError("Not all commitments were received")
-
-        for p_id in self._received_closed_commitments:
-            closed_commitment = self._received_closed_commitments[p_id]
-            open_commitment = self._received_open_commitments[p_id]
-
-            if closed_commitment.commitment != open_commitment.commitment:
-                raise ThresholdCryptoError("Open and close commitment values differ for participant {}".format(p_id))
-
-            if self._compute_commitment(open_commitment.r, open_commitment.h_i) != closed_commitment.commitment:
-                raise ThresholdCryptoError("Invalid commitment for participant {}".format(p_id))
 
     def compute_public_key(self) -> PublicKey:
         """
@@ -210,7 +207,8 @@ class Participant:
 
         :return: the public key
         """
-        self._check_all_commitment_validities()
+        if len(self._received_open_commitments) != self.threshold_params.n:
+            raise ThresholdCryptoError("Not all commitments were received")
 
         participants_h_i = [c.h_i for c in self._received_open_commitments.values()]
         h = number.ecc_sum(participants_h_i)
@@ -232,7 +230,8 @@ class Participant:
 
         :param F_ij: the received F_ij value
         """
-        # TODO check that all commitments match once before receiving the first F_ij value (boolean flag/global state enum/...?)
+        # implicit check for successful receival of all commitments
+        self.compute_public_key()
 
         source_id = F_ij.source_participant_id
         len_F_ij = len(F_ij.F_ij)
