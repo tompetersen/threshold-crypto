@@ -37,7 +37,59 @@ The public key and shares of the private key can be computed in a centralized ma
 
 ### Distributed Key Generation
 
-TODO
+But they can also be computed via a distributed key generation (DKG) protocol following "A threshold cryptosystem without a trusted party" by Pedersen (1991).
+This involves multiple steps performed by all participants in collaboration.
+The following example code uses lists to illustrate this, but has to be distributed over the different participant applications and machines in practice.
+
+The first step is the participant initialization:
+
+    >>> participant_ids = list(range(1, thresh_params.n + 1))
+    >>> participants = [tc.Participant(id, participant_ids, curve_params, thresh_params) for id in participant_ids]
+
+Next each participant broadcasts a closed commitment to a share of the later public key to the other participants:
+
+    >>> for pi in participants:
+    ...     for pj in participants:
+    ...         if pj != pi:
+    ...             closed_commitment = pj.closed_commmitment()
+    ...             pi.receive_closed_commitment(closed_commitment)
+
+After each participant has received all closed commitments they broadcast their open commitments:
+
+    >>> for pi in participants:
+    ...     for pj in participants:
+    ...         if pj != pi:
+    ...             open_commitment = pj.open_commitment()
+    ...             pi.receive_open_commitment(open_commitment)
+
+Afterwards each participant should be able to compute the same public key:
+
+    >>> public_key = participants[0].compute_public_key()
+    >>> for pk in [p.compute_public_key() for p in participants[1:]]:
+    ...     assert public_key == pk
+
+Now each participant broadcasts his F_ij (following the notation of Pedersen) values to all other participants.
+These values are used to commit to the secret s_ij values send and received in the next step.
+
+    >>> for pi in participants:
+    ...     for pj in participants:
+    ...         if pj != pi:
+    ...             F_ij = pj.F_ij_value()
+    ...             pi.receive_F_ij_value(F_ij)
+
+Ongoing each participant sends a share of his private secret value to every other participant SECRETLY.
+**Attention**: The library currently does NOT enforce this secrecy. Clients have to provide this functionality themselves somehow.
+This is heavily important and the protocol does not fulfill its security guarantees otherwise (meaning it is completely broken).
+
+    >>> for pi in participants:
+    ...     for pj in participants:
+    ...         if pj != pi:
+    ...             s_ij = pj.s_ij_value_for_participant(pi.id)
+    ...             pi.receive_sij(s_ij)
+
+Finally each participant can compute his `KeyShare`, which can be used for computing `PartialDecryption` or `PartialReEncryptionKey` objects.
+
+    >>> shares = [p.compute_share() for p in participants]
 
 ### Encryption
 
@@ -79,9 +131,9 @@ A third party computes non-secret values required for the generation of the re-e
 	>>> new_indices = [key_share.x for key_share in new_key_shares][:t_max]
 
 	>>> coefficients = []
-	>>> for p in range(t_max):
-	...     old_lc = tc.compute_lagrange_coefficient_for_key_shares_indices(old_indices, curve_params, p)
-	...     new_lc = tc.compute_lagrange_coefficient_for_key_shares_indices(new_indices, curve_params, p)
+	>>> for p in range(1, t_max + 1):
+	...     old_lc = tc.lagrange_coefficient_for_key_share_indices(old_indices, p, curve_params)
+	...     new_lc = tc.lagrange_coefficient_for_key_share_indices(new_indices, p, curve_params)
 	...     coefficients.append((old_lc, new_lc))
 	
  A number of `max(t_old, t_new)` participants now compute their partial re-encryption keys using these non-secret values and his shares:
