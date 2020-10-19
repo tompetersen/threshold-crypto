@@ -286,12 +286,14 @@ class DkgTestCase(unittest.TestCase):
         participant_ids = list(range(1, self.tp.n + 1))
         participants = [participant.Participant(id, participant_ids, self.cp, self.tp) for id in participant_ids]
 
+        # via broadcast
         for pi in participants:
             for pj in participants:
                 if pj != pi:
                     closed_commitment = pj.closed_commmitment()
                     pi.receive_closed_commitment(closed_commitment)
 
+        # via broadcast
         for pi in participants:
             for pj in participants:
                 if pj != pi:
@@ -302,13 +304,14 @@ class DkgTestCase(unittest.TestCase):
         for pk in [p.compute_public_key() for p in participants[1:]]:
             self.assertEqual(public_key, pk)
 
-        # steps for Pedersen DKG protocol
+        # via broadcast
         for pi in participants:
             for pj in participants:
                 if pj != pi:
                     F_ij = pj.F_ij_value()
                     pi.receive_F_ij_value(F_ij)
 
+        # SECRETLY from i to j
         for pi in participants:
             for pj in participants:
                 if pj != pi:
@@ -325,3 +328,189 @@ class DkgTestCase(unittest.TestCase):
         dm = central.decrypt_message(pdms, em, self.tp)
 
         self.assertEqual(dm, self.message)
+
+    def test_compromised_open_commitment(self):
+        participant_ids = list(range(1, self.tp.n + 1))
+        participants = [participant.Participant(id, participant_ids, self.cp, self.tp) for id in participant_ids]
+
+        # via broadcast
+        for pi in participants:
+            for pj in participants:
+                if pj != pi:
+                    closed_commitment = pj.closed_commmitment()
+                    pi.receive_closed_commitment(closed_commitment)
+
+        with self.assertRaises(ThresholdCryptoError):
+            open_commitment = participants[0].open_commitment()
+
+            # tamper with open commitment
+            open_commitment.h_i = 2 * open_commitment.h_i
+
+            participants[1].receive_open_commitment(open_commitment)
+
+    def test_compromised_F_value(self):
+        participant_ids = list(range(1, self.tp.n + 1))
+        participants = [participant.Participant(id, participant_ids, self.cp, self.tp) for id in participant_ids]
+
+        # via broadcast
+        for pi in participants:
+            for pj in participants:
+                if pj != pi:
+                    closed_commitment = pj.closed_commmitment()
+                    pi.receive_closed_commitment(closed_commitment)
+
+        # via broadcast
+        for pi in participants:
+            for pj in participants:
+                if pj != pi:
+                    open_commitment = pj.open_commitment()
+                    pi.receive_open_commitment(open_commitment)
+
+        # via broadcast
+        for pi in participants:
+            for pj in participants:
+                if pj != pi:
+                    F_ij = pj.F_ij_value()
+
+                    # tamper with one F_ij
+                    if pj.id == 1:
+                        F_ij.F_ij[0] = 2 * F_ij.F_ij[0]
+
+                    pi.receive_F_ij_value(F_ij)
+
+        # SECRETLY from i to j
+        with self.assertRaises(ThresholdCryptoError):
+            s_ij = participants[0].s_ij_value_for_participant(participants[1].id)
+            participants[1].receive_sij(s_ij)
+
+    def test_compromised_s_ij_value(self):
+        participant_ids = list(range(1, self.tp.n + 1))
+        participants = [participant.Participant(id, participant_ids, self.cp, self.tp) for id in participant_ids]
+
+        # via broadcast
+        for pi in participants:
+            for pj in participants:
+                if pj != pi:
+                    closed_commitment = pj.closed_commmitment()
+                    pi.receive_closed_commitment(closed_commitment)
+
+        # via broadcast
+        for pi in participants:
+            for pj in participants:
+                if pj != pi:
+                    open_commitment = pj.open_commitment()
+                    pi.receive_open_commitment(open_commitment)
+
+        # via broadcast
+        for pi in participants:
+            for pj in participants:
+                if pj != pi:
+                    F_ij = pj.F_ij_value()
+                    pi.receive_F_ij_value(F_ij)
+
+        # SECRETLY from i to j
+        with self.assertRaises(ThresholdCryptoError):
+            s_ij = participants[0].s_ij_value_for_participant(participants[1].id)
+
+            # tamper with s_ij
+            s_ij.s_ij = 2 * s_ij.s_ij % self.cp.order
+
+            participants[1].receive_sij(s_ij)
+
+    def test_not_enough_open_commitments(self):
+        participant_ids = list(range(1, self.tp.n + 1))
+        participants = [participant.Participant(id, participant_ids, self.cp, self.tp) for id in participant_ids]
+
+        # via broadcast
+        # participants[0] is missing participants[1]'s commitment
+        for pj in participants[2:]:
+            closed_commitment = pj.closed_commmitment()
+            participants[0].receive_closed_commitment(closed_commitment)
+
+        with self.assertRaises(ThresholdCryptoError):
+            participants[0].open_commitment()
+
+    def test_not_enough_closed_commitments(self):
+        participant_ids = list(range(1, self.tp.n + 1))
+        participants = [participant.Participant(id, participant_ids, self.cp, self.tp) for id in participant_ids]
+
+        # via broadcast
+        for pi in participants:
+            for pj in participants:
+                if pj != pi:
+                    closed_commitment = pj.closed_commmitment()
+                    pi.receive_closed_commitment(closed_commitment)
+
+        # via broadcast
+        # participants[0] is missing participants[1]'s commitment
+        for pj in participants[2:]:
+            open_commitment = pj.open_commitment()
+            participants[0].receive_open_commitment(open_commitment)
+
+        with self.assertRaises(ThresholdCryptoError):
+            participants[0].compute_public_key()
+
+    def test_not_enough_F_ij_values(self):
+        participant_ids = list(range(1, self.tp.n + 1))
+        participants = [participant.Participant(id, participant_ids, self.cp, self.tp) for id in participant_ids]
+
+        # via broadcast
+        for pi in participants:
+            for pj in participants:
+                if pj != pi:
+                    closed_commitment = pj.closed_commmitment()
+                    pi.receive_closed_commitment(closed_commitment)
+
+        # via broadcast
+        for pi in participants:
+            for pj in participants:
+                if pj != pi:
+                    open_commitment = pj.open_commitment()
+                    pi.receive_open_commitment(open_commitment)
+
+        # via broadcast
+        # participants[0] is missing participants[1]'s F_ij value
+        for pj in participants[2:]:
+            F_ij = pj.F_ij_value()
+            participants[0].receive_F_ij_value(F_ij)
+
+        with self.assertRaises(ThresholdCryptoError):
+            participants[0].s_ij_value_for_participant(2)
+
+    def test_not_enough_s_ij_values(self):
+        participant_ids = list(range(1, self.tp.n + 1))
+        participants = [participant.Participant(id, participant_ids, self.cp, self.tp) for id in participant_ids]
+
+        # via broadcast
+        for pi in participants:
+            for pj in participants:
+                if pj != pi:
+                    closed_commitment = pj.closed_commmitment()
+                    pi.receive_closed_commitment(closed_commitment)
+
+        # via broadcast
+        for pi in participants:
+            for pj in participants:
+                if pj != pi:
+                    open_commitment = pj.open_commitment()
+                    pi.receive_open_commitment(open_commitment)
+
+        public_key = participants[0].compute_public_key()
+        for pk in [p.compute_public_key() for p in participants[1:]]:
+            self.assertEqual(public_key, pk)
+
+        # via broadcast
+        for pi in participants:
+            for pj in participants:
+                if pj != pi:
+                    F_ij = pj.F_ij_value()
+                    pi.receive_F_ij_value(F_ij)
+
+        # SECRETLY from i to j
+        # participants[0] is missing participants[1]'s s_ij value
+        for pj in participants[2:]:
+            s_ij = pj.s_ij_value_for_participant(participants[0].id)
+            participants[0].receive_sij(s_ij)
+
+        with self.assertRaises(ThresholdCryptoError):
+            participants[0].compute_share()
