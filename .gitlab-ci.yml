@@ -16,4 +16,4 @@ test:
 doctest:
   stage: test
   script:
-    - python -c "import doctest; doctest.testfile('README.md');"
+    - python -m doctest README.md
