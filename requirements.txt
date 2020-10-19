@@ -1,2 +1,3 @@
 pynacl
 pycryptodome
+coverage

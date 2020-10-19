@@ -1,0 +1,19 @@
+image: "python:3.6"
+
+before_script:
+  - python --version
+  - pip install -r requirements.txt
+
+stages:
+  - test
+
+test:
+  stage: test
+  script:
+    - coverage run --source=threshold_crypto -m unittest
+    - coverage report
+
+doctest:
+  stage: test
+  script:
+    - python -c "import doctest; doctest.testfile('README.md');"
