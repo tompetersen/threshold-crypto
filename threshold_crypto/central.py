@@ -1,3 +1,5 @@
+from typing import List
+
 import nacl.utils
 import nacl.secret
 import nacl.encoding
@@ -5,15 +7,24 @@ import nacl.exceptions
 import nacl.hash
 from Crypto.PublicKey import ECC
 
-from threshold_crypto.data import CurveParameters, ThresholdParameters, KeyShare, PartialDecryption, \
-    EncryptedMessage, ThresholdCryptoError, PartialReEncryptionKey, ReEncryptionKey, PublicKey, LagrangeCoefficient
+from threshold_crypto.data import (CurveParameters,
+                                   ThresholdParameters,
+                                   KeyShare,
+                                   PartialDecryption,
+                                   EncryptedMessage,
+                                   ThresholdCryptoError,
+                                   PartialReEncryptionKey,
+                                   ReEncryptionKey,
+                                   PublicKey,
+                                   LagrangeCoefficient)
 from threshold_crypto import number
 
 
 # key generation
 
 
-def create_public_key_and_shares_centralized(curve_params: CurveParameters, threshold_params: ThresholdParameters) -> (ECC.EccPoint, [KeyShare]):
+def create_public_key_and_shares_centralized(curve_params: CurveParameters,
+                                             threshold_params: ThresholdParameters) -> (ECC.EccPoint, List[KeyShare]):
     """
     Creates a public key and n shares by choosing a random secret key and using it for computations.
 
@@ -30,10 +41,10 @@ def create_public_key_and_shares_centralized(curve_params: CurveParameters, thre
     supporting_points = range(1, threshold_params.n + 1)
     shares = [KeyShare(x, polynom.evaluate(x), curve_params) for x in supporting_points]
 
-    return pk,shares
+    return pk, shares
 
 
-def _restore_priv_key(curve_params: CurveParameters, shares: [KeyShare], treshold_params: ThresholdParameters):
+def _restore_priv_key(curve_params: CurveParameters, shares: List[KeyShare], treshold_params: ThresholdParameters):
     """
     Combine multiple key shares to compute the (implicit) private key.
 
@@ -101,7 +112,9 @@ def _key_bytes_from_point(p: ECC.EccPoint) -> bytes:
     return point_bytes
 
 
-def _encrypt_key_point(key_point: ECC.EccPoint, Q: ECC.EccPoint, curve_params: CurveParameters) -> (ECC.EccPoint, ECC.EccPoint):
+def _encrypt_key_point(key_point: ECC.EccPoint,
+                       Q: ECC.EccPoint,
+                       curve_params: CurveParameters) -> (ECC.EccPoint, ECC.EccPoint):
     k = number.random_in_range(1, curve_params.order)
     C1 = k * curve_params.P
     kQ = k * Q
@@ -113,7 +126,7 @@ def _encrypt_key_point(key_point: ECC.EccPoint, Q: ECC.EccPoint, curve_params: C
 # decryption
 
 
-def decrypt_message(partial_decryptions: [PartialDecryption],
+def decrypt_message(partial_decryptions: List[PartialDecryption],
                     encrypted_message: EncryptedMessage,
                     threshold_params: ThresholdParameters
                     ) -> str:
@@ -132,7 +145,7 @@ def decrypt_message(partial_decryptions: [PartialDecryption],
     return _decrypt_message(partial_decryptions, encrypted_message)
 
 
-def _decrypt_message(partial_decryptions: [PartialDecryption],
+def _decrypt_message(partial_decryptions: List[PartialDecryption],
                      encrypted_message: EncryptedMessage,
                      ) -> str:
     # this method does not contain the check for given number of partial decryptions to allow testing the failing decryption
@@ -179,7 +192,9 @@ def _combine_shares(partial_decryptions: List[PartialDecryption],
 # re-encryption
 
 
-def lagrange_coefficient_for_key_share_indices(key_share_indices: [int], p_idx: int, curve_params: CurveParameters) -> LagrangeCoefficient:
+def lagrange_coefficient_for_key_share_indices(key_share_indices: List[int],
+                                               p_idx: int,
+                                               curve_params: CurveParameters) -> LagrangeCoefficient:
     """
     Create the ith Lagrange coefficient for a list of key shares.
 
@@ -203,14 +218,16 @@ def lagrange_coefficient_for_key_share_indices(key_share_indices: [int], p_idx: 
     return LagrangeCoefficient(p_idx, key_share_indices, coefficient)
 
 
-def combine_partial_re_encryption_keys(partial_keys: [PartialReEncryptionKey], old_threshold_params: ThresholdParameters, new_threshold_params: ThresholdParameters) -> ReEncryptionKey:
+def combine_partial_re_encryption_keys(partial_keys: List[PartialReEncryptionKey],
+                                       old_threshold_params: ThresholdParameters,
+                                       new_threshold_params: ThresholdParameters) -> ReEncryptionKey:
     """
     Combine a number of partial re-encryption keys yielding the re-encryption key.
 
     :param partial_keys: The partial keys as provided by participants
     :param old_threshold_params: the threshold parameters of the old access structure
     :param new_threshold_params: the threshold parameters of the new access structure
-    :return:
+    :return: the re-encryption key
     """
     # TODO check threshold parameters
 

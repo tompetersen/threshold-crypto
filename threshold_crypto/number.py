@@ -1,6 +1,6 @@
 import functools
 import operator
-from typing import List
+from typing import List, Optional
 
 from Crypto.PublicKey import ECC
 from Crypto.Random import random
@@ -11,7 +11,7 @@ def int_to_bytes(value: int) -> bytes:
     return value.to_bytes((value.bit_length() + 7) // 8, byteorder='big')
 
 
-def ecc_sum(points: List[ECC.EccPoint]):
+def ecc_sum(points: List[ECC.EccPoint]) -> Optional[ECC.EccPoint]:
     """ Compute the sum of a list of EccPoints. """
     if len(points) == 0:
         return None
@@ -35,7 +35,7 @@ def prime_mod_inv(x: int, p: int) -> int:
     return pow(x, p - 2, p)  # Fermats little theorem
 
 
-def prod(factors: [int]) -> int:
+def prod(factors: List[int]) -> int:
     """ Compute the product of a list of integers. """
     return functools.reduce(operator.mul, factors, 1)
 
@@ -43,13 +43,13 @@ def prod(factors: [int]) -> int:
 class PolynomMod:
 
     @staticmethod
-    def create_random_polynom(absolute_term: int, degree: int, q: int):
+    def create_random_polynom(absolute_term: int, degree: int, q: int) -> 'PolynomMod':
         coefficients = [absolute_term]
         coefficients.extend([random_in_range(1, q - 1) for _ in range(0, degree)])
 
         return PolynomMod(coefficients, q)
 
-    def __init__(self, coefficients: [int], q: int):
+    def __init__(self, coefficients: List[int], q: int):
         # Make sure that the highest degree coefficient is set.
         # An alternative would be to strip trailing zero elements.
         assert coefficients[-1] != 0

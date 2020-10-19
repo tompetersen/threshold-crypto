@@ -4,9 +4,19 @@ from Crypto.PublicKey import ECC
 from Crypto.Random import random
 from Crypto.Hash import SHA3_256
 
-from threshold_crypto.data import EncryptedMessage, KeyShare, PartialDecryption, PartialReEncryptionKey, \
-    ThresholdCryptoError, CurveParameters, ThresholdParameters, LagrangeCoefficient, DkgClosedCommitment, \
-    DkgOpenCommitment, DkgSijValue, DkgFijValue, PublicKey
+from threshold_crypto.data import (EncryptedMessage,
+                                   KeyShare,
+                                   PartialDecryption,
+                                   PartialReEncryptionKey,
+                                   ThresholdCryptoError,
+                                   CurveParameters,
+                                   ThresholdParameters,
+                                   LagrangeCoefficient,
+                                   DkgClosedCommitment,
+                                   DkgOpenCommitment,
+                                   DkgSijValue,
+                                   DkgFijValue,
+                                   PublicKey)
 from threshold_crypto import number
 
 
