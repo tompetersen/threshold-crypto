@@ -44,6 +44,14 @@ class PolynomMod:
 
     @staticmethod
     def create_random_polynom(absolute_term: int, degree: int, q: int) -> 'PolynomMod':
+        """
+        Create a polynomial with random coefficients in range [1, q - 1] and an given absolute term.
+
+        :param absolute_term: the absolute term (constant term)
+        :param degree: the polynomial degree
+        :param q: the modular order of the underlying group
+        :return: the polynom
+        """
         coefficients = [absolute_term]
         coefficients.extend([random_in_range(1, q - 1) for _ in range(0, degree)])
 
@@ -54,25 +62,23 @@ class PolynomMod:
         # An alternative would be to strip trailing zero elements.
         assert coefficients[-1] != 0
 
-        self._coefficients = coefficients
-        self._q = q
+        self.coefficients = coefficients
+        self.q = q
 
     @property
-    def q(self) -> int:
-        return self._q
-
-    @property
-    def degree(self):
-        return len(self._coefficients) - 1
-
-    @property
-    def coefficients(self) -> list:
-        return self._coefficients
+    def degree(self) -> int:
+        return len(self.coefficients) - 1
 
     def evaluate(self, x: int) -> int:
-        evaluated = ((self._coefficients[j] * pow(x, j)) for j in range(0, self.degree + 1))
+        """
+        Evaluate the polynomial for a given x value.
+
+        :param x: the value
+        :return: the result
+        """
+        evaluated = ((self.coefficients[j] * pow(x, j)) for j in range(0, self.degree + 1))
         return sum(evaluated) % self.q
 
-    def __str__(self):
-        c_list = ["%d*x^%d " % (c, i) for (i, c) in enumerate(self._coefficients)]
-        return "Polynom of degree %d: f(x) = %s" % (self.degree, " + ".join(c_list))
+    def __str__(self) -> str:
+        c_list = ["%d*x^%d " % (c, i) for (i, c) in enumerate(self.coefficients)]
+        return "Polynom of degree {}: f(x) = {}".format(self.degree, " + ".join(c_list))
