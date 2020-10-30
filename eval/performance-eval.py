@@ -26,6 +26,10 @@ GLOBAL_VAR_TP_PARAMS = [
         (40, 50),
     ]
 
+# message_sizes_in_bytes = [32, 10 ** 3, 10 ** 4, 10 ** 5, 10 ** 6]
+MESSAGE_BYTE_SIZES = [5000 * i for i in range(1, 200)]
+#MESSAGE_BYTE_SIZES = [50000 * i for i in range(1, 20)]
+
 
 def write_csv(row):
     with open(EVAL_FILE_NAME, "a") as f:
@@ -115,21 +119,18 @@ def eval_dkg(timing_rounds):
 # independent of tp, depends on message size (no huge impact)
 
 
-def eval_enc():
+def eval_enc(timing_rounds):
     tp = tc.ThresholdParameters(3, 5)
     pub_key, shares = tc.create_public_key_and_shares_centralized(GLOBAL_CP, tp)
 
-    # message_sizes_in_bytes = [32, 10 ** 3, 10 ** 4, 10 ** 5, 10 ** 6]
-    message_sizes_in_bytes = [5000 * i for i in range(1, 200)]
-
-    for msg_size in message_sizes_in_bytes:
+    for msg_size in MESSAGE_BYTE_SIZES:
         msg = "a" * msg_size  # since encryption uses utf-8 encoding, this leads to messages of size msg_size
         eval_performance("Encrypt",
                          "{}".format(msg_size),
                          tc.encrypt_message,
                          message=msg,
                          public_key=pub_key,
-                         timing_rounds=1000
+                         timing_rounds=timing_rounds
                          )
 
 
@@ -137,16 +138,13 @@ def eval_enc():
 # independent of tp, depends on message size (no huge impact)
 
 
-
-
 def eval_dec_msg_size(timing_rounds):
-    message_sizes_in_bytes = [5000 * i for i in range(1, 200)]
+    t, n = 2, 3
+    tp = tc.ThresholdParameters(t, n)
+    pub_key, shares = tc.create_public_key_and_shares_centralized(GLOBAL_CP, tp)
 
-    for msg_size in message_sizes_in_bytes:
+    for msg_size in MESSAGE_BYTE_SIZES:
         msg = "a" * msg_size
-        t, n = 2, 3
-        tp = tc.ThresholdParameters(t, n)
-        pub_key, shares = tc.create_public_key_and_shares_centralized(GLOBAL_CP, tp)
         enc_msg = tc.encrypt_message(msg, pub_key)
         pds = [tc.compute_partial_decryption(enc_msg, share) for share in shares[:t]]
 
@@ -163,7 +161,7 @@ def eval_dec_msg_size(timing_rounds):
 # EVALUATE PARTIAL DECRYPTION COMPUTATION
 
 
-def eval_pd():
+def eval_pd(timing_rounds):
     tp = tc.ThresholdParameters(3, 5)
     pub_key, shares = tc.create_public_key_and_shares_centralized(GLOBAL_CP, tp)
     em = tc.encrypt_message("a", pub_key)
@@ -171,7 +169,8 @@ def eval_pd():
                      "",
                      tc.compute_partial_decryption,
                      encrypted_message=em,
-                     key_share=shares[0]
+                     key_share=shares[0],
+                     timing_rounds=timing_rounds
                      )
 
 
@@ -257,7 +256,7 @@ def eval_rek():
 # EVALUATE RE_ENCRYPTION
 
 
-def eval_reenc():
+def eval_reenc(timing_rounds):
     tp = tc.ThresholdParameters(5, 10)
 
     pub_key, old_shares = tc.create_public_key_and_shares_centralized(GLOBAL_CP, tp)
@@ -279,7 +278,8 @@ def eval_reenc():
                      "",
                      tc.re_encrypt_message,
                      em=em,
-                     re_key=re_encryption_key
+                     re_key=re_encryption_key,
+                     timing_rounds=timing_rounds
                      )
 
 
@@ -291,12 +291,15 @@ def main():
 
     eval_ckg(timing_rounds=1)
     eval_dkg(timing_rounds=1)
-    eval_enc()
-    eval_pd()
+    eval_dec_msg_size(1000)
+    eval_enc(1000)
     eval_dec(timing_rounds=1000)
+    eval_pd(timing_rounds=1000)
     eval_prek()
     eval_rek()
-    eval_reenc()
+    eval_reenc(timing_rounds=1000)
+
+    print("Done! Written to {}".format(EVAL_FILE_NAME))
 
 
 if __name__ == '__main__':

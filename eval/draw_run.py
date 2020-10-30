@@ -17,6 +17,22 @@ FigureParameter = namedtuple('FigureParameter', ['tasks',
                              )
 
 
+def autolabel(rects, ax):
+    """Attach a text label above each bar in *rects*, displaying its height."""
+    bar_color = rects[0].get_facecolor()
+
+    for rect in rects:
+        height = rect.get_height()
+        ax.annotate('{:0.3f}'.format(height),
+                    xy=(rect.get_x() + rect.get_width() / 2, height),
+                    xytext=(0, 3),  # 3 points vertical offset
+                    textcoords="offset points",
+                    rotation=90,
+                    ha='center',
+                    va='bottom',
+                    color=bar_color)
+
+
 def plot_bar(df, fig_params: FigureParameter):
     f, ax = plt.subplots()
 
@@ -93,10 +109,13 @@ def main():
     ]
 
     figures = [
-        # FigureParameter(dkg_task, "Distributed key generation", imgpath("dkg.png"), False),
-        # FigureParameter(decrypt_task, "Decryption", imgpath("dec.png"), False),
+        FigureParameter(dkg_task, "Distributed key generation", imgpath("dkg.png"), False),
+        FigureParameter(decrypt_task, "Decryption", imgpath("dec.png"), False),
         FigureParameter(diverse_tasks, "Remaining operations", imgpath("divers.png"), True),
     ]
+
+    # for fig_params in figures:
+    #     plot_bar(df, fig_params)
 
     """
     performed on "daily business" or multiple times:
@@ -129,37 +148,35 @@ def main():
     missing: ckg(?), dec, pdec, prek, rekc
     """
 
-    # sns.set_style('whitegrid')
-
-    # f, ax = plt.subplots(2, 2)  # , sharey=True)
-    # subplot(diverse_tasks, ax[0][0])
-    # subplot(dkg_task, ax[1][0])
-    # subplot(decrypt_task, ax[0][1])
-    # subplot(encrypt_task, ax[1][1])
-    # f.tight_layout()
-    # # plt.show()
-    # f.savefig("test.png")
-
-    for fig_params in figures:
-        plot_bar(df, fig_params)
-
-    f = draw_encryption(df)
-    print("Saving {}".format(imgpath("enc_line.png")))
-    f.savefig(imgpath("enc_line.png"))
+    f = draw_enc_dec(df)
+    print("Saving {}".format(imgpath("enc_dec_line.png")))
+    f.savefig(imgpath("enc_dec_line.png"))
 
     f = draw_dkg_ckg_dec(df)
     print("Saving {}".format(imgpath("dkg_ckg_dec.png")))
     f.savefig(imgpath("dkg_ckg_dec.png"))
 
+    f = draw_enc_dec_re_pdec(df)
+    print("Saving {}".format(imgpath("enc_dec_re_pdec.png")))
+    f.savefig(imgpath("enc_dec_re_pdec.png"))
 
-def draw_encryption(df) -> Figure:
+
+def draw_enc_dec(df):
     res = plt.subplots()
     f = res[0]
     ax: Axes = res[1]
 
-    t_data = df.loc[df.task == 'Encrypt']
-    t_data.parameters = t_data.parameters.astype(int)
-    plot = ax.plot(t_data.parameters, t_data.time, color='#1979a9')
+    draw_enc_dec_on_ax(df, ax)
+    f.tight_layout()
+
+    return f
+
+
+def draw_enc_dec_on_ax(df, ax: Axes):
+    enc_data = df.loc[df.task == 'Encrypt']
+    dec_data = df.loc[df.task == 'Decrypt23']
+    plot1 = ax.plot(enc_data.parameters.astype(int), enc_data.time, label="encryption")  # , color='#FF0000')
+    plot2 = ax.plot(enc_data.parameters.astype(int), dec_data.time, label="decryption in (2,3)-scheme")  # , color='#00FF00')
 
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -177,13 +194,17 @@ def draw_encryption(df) -> Figure:
     ax.set_ylabel('time [s]', labelpad=15, color='#333333')
     # ax.set_title("Encryption time for different messages sizes", pad=15, color='#333333', weight='bold')
 
-    f.tight_layout()
-
-    return f
+    ax.legend()
 
 
 def draw_dkg_ckg_dec(df) -> Figure:
     f, ax = plt.subplots()
+    draw_dkg_ckg_dec_on_ax(df, ax)
+    f.tight_layout()
+    return f
+
+
+def draw_dkg_ckg_dec_on_ax(df, ax):
     tasks = ["DKG", "CKG", "DecryptCombine"]
     dkg_data = df.loc[df.task == 'DKG']
     ckg_data = df.loc[df.task == 'CKG']
@@ -192,34 +213,19 @@ def draw_dkg_ckg_dec(df) -> Figure:
     x = np.arange(len(dkg_data))
     width = 0.2
 
-    bar_dkg = ax.bar(x, dkg_data.time, width, label="DKG")
     bar_ckg = ax.bar(x - 1.2 * width, ckg_data.time, width, label="CKG")
+    bar_dkg = ax.bar(x, dkg_data.time, width, label="DKG")
     bar_dec = ax.bar(x + 1.2 * width, dec_data.time, width, label="DEC")
 
     # annotate bars with their respective values
-    def autolabel(rects):
-        """Attach a text label above each bar in *rects*, displaying its height."""
-        bar_color = rects[0].get_facecolor()
-
-        for rect in rects:
-            height = rect.get_height()
-            ax.annotate('{:0.3f}'.format(height),
-                        xy=(rect.get_x() + rect.get_width() / 2, height),
-                        xytext=(0, 3),  # 3 points vertical offset
-                        textcoords="offset points",
-                        rotation=90,
-                        ha='center',
-                        va='bottom',
-                        color=bar_color)
-
-    autolabel(bar_dkg)
-    autolabel(bar_ckg)
-    autolabel(bar_dec)
+    autolabel(bar_dkg, ax)
+    autolabel(bar_ckg, ax)
+    autolabel(bar_dec, ax)
 
     # set graph "borders"
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_visible(False)
+    ax.spines['left'].set_color('#DDDDDD')
     ax.spines['bottom'].set_color('#DDDDDD')
 
     # include grid lines behind bars
@@ -235,12 +241,51 @@ def draw_dkg_ckg_dec(df) -> Figure:
     # axis labels and title
     ax.set_xlabel('used (t,n)-scheme', labelpad=15, color='#333333')
     ax.set_ylabel('time [s]', labelpad=15, color='#333333')
-    ax.set_title("TITLE", pad=15, color='#333333', weight='bold')
+    # ax.set_title("TITLE", pad=15, color='#333333', weight='bold')
 
     # insert legend
     ax.legend()
 
-    f.tight_layout()
+
+def draw_re_pdec_on_ax(df, ax: Axes):
+    diverse_tasks = [
+        "ReEncrypt",
+        "PartialDecryption",
+        #"PartialReEncryptionKey",
+        #"ReEncryptionKeyCombination",
+    ]
+    t_data = df.loc[df.task.isin(diverse_tasks)]
+    x_data = t_data.task
+    x_data = pandas.Series(["PD", "RE"])
+
+    plot = ax.bar(x=x_data, height=t_data.time, width=0.2)  # , color='#214355')
+
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    ax.spines['bottom'].set_color('#DDDDDD')
+
+    autolabel(plot, ax)
+
+    # include grid lines behind bars
+    ax.set_axisbelow(True)
+    ax.grid(axis='y', color="#DDDDDD")
+
+    # ticks and labels
+    ax.tick_params(axis='x', rotation=90)
+    ax.tick_params(axis='both', color="#DDDDDD")
+    ax.yaxis.set_tick_params(labelleft=False)
+
+
+def draw_enc_dec_re_pdec(df):
+    f: Figure = plt.figure(constrained_layout=True)
+    widths = [9, 1]
+    spec = f.add_gridspec(ncols=2, nrows=1, width_ratios=widths)
+    ax0 = f.add_subplot(spec[0, 0])
+    ax1 = f.add_subplot(spec[0, 1], sharey=ax0)
+
+    draw_enc_dec_on_ax(df, ax0)
+    draw_re_pdec_on_ax(df, ax1)
 
     return f
 
