@@ -148,7 +148,7 @@ A third party computes non-secret values required for the generation of the re-e
  
 The third party computes the re-encryption key by combining the partial re-encryption keys:
  
-	>>> re_enc_key = tc.combine_partial_re_encryption_keys(partial_re_enc_keys, thresh_params, thresh_params)
+	>>> re_enc_key = tc.combine_partial_re_encryption_keys(partial_re_enc_keys, pub_key, new_pub_key, thresh_params, thresh_params)
 
 The encrypted message is re-encrypted to be decryptable by the new shares:
 
