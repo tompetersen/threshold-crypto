@@ -24,7 +24,7 @@ from threshold_crypto import number
 
 
 def create_public_key_and_shares_centralized(curve_params: CurveParameters,
-                                             threshold_params: ThresholdParameters) -> (ECC.EccPoint, List[KeyShare]):
+                                             threshold_params: ThresholdParameters) -> (PublicKey, List[KeyShare]):
     """
     Creates a public key and n shares by choosing a random secret key and using it for computations.
 
@@ -44,7 +44,7 @@ def create_public_key_and_shares_centralized(curve_params: CurveParameters,
     return pk, shares
 
 
-def _restore_priv_key(curve_params: CurveParameters, shares: List[KeyShare], treshold_params: ThresholdParameters):
+def _restore_priv_key(curve_params: CurveParameters, shares: List[KeyShare], treshold_params: ThresholdParameters) -> int:
     """
     Combine multiple key shares to compute the (implicit) private key.
 
@@ -219,12 +219,16 @@ def lagrange_coefficient_for_key_share_indices(key_share_indices: List[int],
 
 
 def combine_partial_re_encryption_keys(partial_keys: List[PartialReEncryptionKey],
+                                       old_public_key: PublicKey,
+                                       new_public_key: PublicKey,
                                        old_threshold_params: ThresholdParameters,
                                        new_threshold_params: ThresholdParameters) -> ReEncryptionKey:
     """
     Combine a number of partial re-encryption keys yielding the re-encryption key.
 
     :param partial_keys: The partial keys as provided by participants
+    :param old_public_key: the public key of the old access structure
+    :param new_public_key: the public key of the new access structure
     :param old_threshold_params: the threshold parameters of the old access structure
     :param new_threshold_params: the threshold parameters of the new access structure
     :return: the re-encryption key
@@ -242,6 +246,14 @@ def combine_partial_re_encryption_keys(partial_keys: List[PartialReEncryptionKey
             raise ThresholdCryptoError("Varying curve parameters found in partial re-encryption keys")
 
     re_key = sum([k.partial_key for k in partial_keys]) % curve_params.order
+
+    # check that the proxy key is valid using the given public keys
+    # proxy_key * P =?= new_pub - old_pub
+    checkval1 = curve_params.P * re_key
+    checkval2 = new_public_key.Q + (-old_public_key.Q)
+
+    if checkval1 != checkval2:
+        raise ThresholdCryptoError("The combined proxy key is invalid for given public keys.")
 
     return ReEncryptionKey(re_key, curve_params)
 

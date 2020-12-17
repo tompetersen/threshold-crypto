@@ -225,7 +225,11 @@ class PreTestCase(unittest.TestCase):
             partial_key = participant.compute_partial_re_encryption_key(s_old, old_lambda, s_new, new_lambda)
             partial_re_encrypt_keys.append(partial_key)
 
-        re_encrypt_key = central.combine_partial_re_encryption_keys(partial_re_encrypt_keys, self.tp, new_tp)
+        re_encrypt_key = central.combine_partial_re_encryption_keys(partial_re_encrypt_keys,
+                                                                    self.pk,
+                                                                    new_pk,
+                                                                    self.tp,
+                                                                    new_tp)
         re_em = central.re_encrypt_message(self.em, re_encrypt_key)
 
         self.assertNotEqual(self.em, re_em)
@@ -244,6 +248,7 @@ class PreTestCase(unittest.TestCase):
             central._decrypt_message(new_partial_decryptions, re_em)
 
         self.assertIn("Message decryption failed", str(dec_exception_context.exception))
+
 
 class DkgTestCase(unittest.TestCase):
     """
