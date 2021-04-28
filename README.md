@@ -1,17 +1,18 @@
 # Threshold cryptography library
 
 
-A stateless library which offers functionality for ElGamal-based threshold decryption with centralized key generation.
+A stateless library which offers functionality for ElGamal-based threshold decryption with centralized or distributed key generation.
 
 Threshold decryption means a message can be encrypted using a simple public key, but for decryption at least t out of n
 share owners must collaborate to decrypt the message.
 
-A hybrid approach (using pynacl for symmetric encryption) is used for message encryption and decryption.
-Therefor there are no limitations regarding message lengths or format. Additionally the integrity of a message is
+A hybrid approach (using [pynacl](https://pynacl.readthedocs.io) for symmetric encryption and 
+[PyCryptodome](https://pycryptodome.readthedocs.io) for ECC operations) is used for message encryption and decryption.
+Therefore there are no limitations regarding message lengths or format. Additionally the integrity of a message is
 secured by using the AE-scheme, meaning changes to some parts of the ciphertext, to partial decryptions or even
 dishonest share owners can be detected.
 
-**Warning**: This library has never been (independently) audited and should not be used for productive applications.
+**Warning**: This library has never been (independently) audited and must not be used for productive applications.
 
 ## Usage
 
@@ -78,7 +79,7 @@ These values are used to commit to the secret s_ij values send and received in t
     ...             pi.receive_F_ij_value(F_ij)
 
 Ongoing each participant sends a share of his private secret value to every other participant SECRETLY.
-**Attention**: The library currently does NOT enforce this secrecy. Clients have to provide this functionality themselves somehow.
+**Attention**: The library currently does NOT enforce this secrecy. Clients have to provide this functionality themselves.
 This is heavily important and the protocol does not fulfill its security guarantees otherwise (meaning it is completely broken).
 
     >>> for pi in participants:
@@ -161,5 +162,3 @@ Decryption can now be performed using the new shares:
     >>> decrypted_message = tc.decrypt_message(partial_decryptions, new_encrypted_message, thresh_params)
     >>> print(decrypted_message)
     Some secret message to be encrypted!
-
-## Stuff?!
