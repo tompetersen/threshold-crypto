@@ -138,8 +138,7 @@ def eval_enc(timing_rounds):
 # independent of tp, depends on message size (no huge impact)
 
 
-def eval_dec_msg_size(timing_rounds):
-    t, n = 2, 3
+def eval_dec_msg_size(timing_rounds, t=2, n=3):
     tp = tc.ThresholdParameters(t, n)
     pub_key, shares = tc.create_public_key_and_shares_centralized(GLOBAL_CP, tp)
 
@@ -148,7 +147,7 @@ def eval_dec_msg_size(timing_rounds):
         enc_msg = tc.encrypt_message(msg, pub_key)
         pds = [tc.compute_partial_decryption(enc_msg, share) for share in shares[:t]]
 
-        eval_performance("Decrypt23",
+        eval_performance("Decrypt" + str(t) + str(n),
                          "{}".format(msg_size),
                          tc.decrypt_message,
                          partial_decryptions=pds,
@@ -259,8 +258,8 @@ def eval_rek():
 def eval_reenc(timing_rounds):
     tp = tc.ThresholdParameters(5, 10)
 
-    pub_key, old_shares = tc.create_public_key_and_shares_centralized(GLOBAL_CP, tp)
-    _, new_shares = tc.create_public_key_and_shares_centralized(GLOBAL_CP, tp)
+    old_pub_key, old_shares = tc.create_public_key_and_shares_centralized(GLOBAL_CP, tp)
+    new_pub_key, new_shares = tc.create_public_key_and_shares_centralized(GLOBAL_CP, tp)
     t_old_shares = old_shares[:tp.t]
     t_new_shares = new_shares[:tp.t]
     t_old_shares_x = [share.x for share in t_old_shares]
@@ -270,9 +269,9 @@ def eval_reenc(timing_rounds):
     prek = []
     for os, olc, ns, nlc in zip(t_old_shares, old_lc, t_new_shares, new_lc):
         prek.append(tc.compute_partial_re_encryption_key(os, olc, ns, nlc))
-    re_encryption_key = tc.combine_partial_re_encryption_keys(prek, tp, tp)
+    re_encryption_key = tc.combine_partial_re_encryption_keys(prek, old_pub_key, new_pub_key, tp, tp)
 
-    em = tc.encrypt_message("a", pub_key)
+    em = tc.encrypt_message("a", old_pub_key)
 
     eval_performance("ReEncrypt",
                      "",
@@ -291,8 +290,10 @@ def main():
 
     eval_ckg(timing_rounds=1)
     eval_dkg(timing_rounds=1)
-    eval_dec_msg_size(1000)
     eval_enc(1000)
+    eval_dec_msg_size(1000)
+    eval_dec_msg_size(1000, t=3, n=5)
+    eval_dec_msg_size(1000, t=2, n=10)
     eval_dec(timing_rounds=1000)
     eval_pd(timing_rounds=1000)
     eval_prek()

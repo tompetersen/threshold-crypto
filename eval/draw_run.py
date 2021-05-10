@@ -153,8 +153,16 @@ def main():
     f.savefig(imgpath("enc_dec_line.png"))
 
     f = draw_dkg_ckg_dec(df)
-    print("Saving {}".format(imgpath("dkg_ckg_dec.png")))
-    f.savefig(imgpath("dkg_ckg_dec.png"))
+    print("Saving {}".format(imgpath("dkg_dec.png")))
+    f.savefig(imgpath("dkg_dec.png"))
+
+    f = draw_dkg_or_dec(df, "DKG", "DKG")
+    print("Saving {}".format(imgpath("dkg.png")))
+    f.savefig(imgpath("dkg.png"))
+
+    f = draw_dkg_or_dec(df, "DecryptCombine", "Combine")
+    print("Saving {}".format(imgpath("dec.png")))
+    f.savefig(imgpath("dec.png"))
 
     f = draw_enc_dec_re_pdec(df)
     print("Saving {}".format(imgpath("enc_dec_re_pdec.png")))
@@ -174,9 +182,14 @@ def draw_enc_dec(df):
 
 def draw_enc_dec_on_ax(df, ax: Axes):
     enc_data = df.loc[df.task == 'Encrypt']
-    dec_data = df.loc[df.task == 'Decrypt23']
-    plot1 = ax.plot(enc_data.parameters.astype(int), enc_data.time, label="encryption")  # , color='#FF0000')
-    plot2 = ax.plot(enc_data.parameters.astype(int), dec_data.time, label="decryption in (2,3)-scheme")  # , color='#00FF00')
+    dec23_data = df.loc[df.task == 'Decrypt23']
+    dec35_data = df.loc[df.task == 'Decrypt35']
+    dec210_data = df.loc[df.task == 'Decrypt210']
+
+    plot1 = ax.plot(enc_data.parameters.astype(int), enc_data.time / enc_data.rounds, label="Encrypt")  # , color='#FF0000')
+    plot2 = ax.plot(enc_data.parameters.astype(int), dec23_data.time / dec23_data.rounds, label="Combine for (2,3)-scheme")  # , color='#00FF00')
+    plot3 = ax.plot(enc_data.parameters.astype(int), dec210_data.time / dec210_data.rounds, label="Combine for (2,10)-scheme")  # , color='#00FF00')
+    plot4 = ax.plot(enc_data.parameters.astype(int), dec35_data.time / dec35_data.rounds, label="Combine for (3,5)-scheme")  # , color='#00FF00')
 
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -192,8 +205,49 @@ def draw_enc_dec_on_ax(df, ax: Axes):
 
     ax.set_xlabel('plaintext length [byte]', labelpad=15, color='#333333')
     ax.set_ylabel('time [s]', labelpad=15, color='#333333')
-    # ax.set_title("Encryption time for different messages sizes", pad=15, color='#333333', weight='bold')
 
+    ax.legend()
+
+
+def draw_dkg_or_dec(df, dkg_dec, label) -> Figure:
+    f, ax = plt.subplots()
+    draw_dkg_on_ax(df, ax, dkg_dec, label)
+    f.tight_layout()
+    return f
+
+
+def draw_dkg_on_ax(df, ax, dkg_dec, label):
+    dkg_data = df.loc[df.task == dkg_dec]
+
+    x = np.arange(len(dkg_data))
+    print(dkg_data.parameters)
+    width = 0.5
+    bar_dkg = ax.bar(x, dkg_data.time / dkg_data.rounds, width, label=label)
+
+    # annotate bars with their respective values
+    autolabel(bar_dkg, ax)
+
+    # set graph "borders"
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_color('#DDDDDD')
+    ax.spines['bottom'].set_color('#DDDDDD')
+
+    # include grid lines behind bars
+    ax.set_axisbelow(True)
+    ax.grid(axis='y', color="#DDDDDD")
+
+    # ticks and labels
+    ax.tick_params(axis='x', rotation=90)
+    ax.tick_params(axis='both', color="#DDDDDD")
+    ax.set_xticks(x)
+    ax.set_xticklabels(dkg_data.parameters)
+
+    # axis labels and title
+    ax.set_xlabel('used (t,n)-scheme', labelpad=15, color='#333333')
+    ax.set_ylabel('time [s]', labelpad=15, color='#333333')
+
+    # insert legend
     ax.legend()
 
 
